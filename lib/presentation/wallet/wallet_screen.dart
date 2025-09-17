@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:swap_app/const/conts_colors.dart';
 import 'package:swap_app/const/go_button.dart';
+import 'package:swap_app/presentation/wallet/payment_screen.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -150,7 +152,7 @@ class WalletScreen extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.black,
+                            color: AppColors.goBlue,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
@@ -181,7 +183,7 @@ class WalletScreen extends StatelessWidget {
                         // Handle payment action
                       },
                       text: 'Pay AED 36.50',
-                      backgroundColor: Colors.black,
+                      backgroundColor: AppColors.goBlue,
                       textColor: Colors.white,
                       foregroundColor: Colors.white,
                     ),
@@ -252,14 +254,14 @@ class PaymentBottomSheet extends StatelessWidget {
             // Continue Button
             GoButton(
               onPressed: () {
-                Navigator.pop(context);
+             Navigator.push(context, MaterialPageRoute(builder: (context) => const PaymentScreen()));
               },
               text: 'Continue',
-              backgroundColor: Colors.black,
+              backgroundColor: AppColors.goBlue,
               textColor: Colors.white,
               foregroundColor: Colors.white,
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
           ],
         ),
       ),
