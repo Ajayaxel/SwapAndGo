@@ -129,7 +129,7 @@ class HomeContent extends StatelessWidget {
             ),
             const SizedBox(height: 5),
 
-            // Map + Search
+            // Map + Search 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(

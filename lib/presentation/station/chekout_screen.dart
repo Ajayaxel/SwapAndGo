@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/station/chekout_details_screen.dart';
-import 'package:swap_app/presentation/station/scan_suceess_screen.dart';
+
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
