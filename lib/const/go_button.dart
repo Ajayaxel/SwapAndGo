@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class GoButton extends StatelessWidget {
-  const GoButton({super.key, required this.onPressed, required this.text , required this.backgroundColor , required this.textColor , required this.foregroundColor});
+  const GoButton({super.key, this.onPressed, required this.text , required this.backgroundColor , required this.textColor , required this.foregroundColor});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final String text;
   final Color backgroundColor;
   final Color textColor;

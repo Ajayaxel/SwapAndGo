@@ -1,198 +1,441 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:swap_app/bloc/auth_bloc.dart';
-import 'package:swap_app/const/go_button.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:swap_app/model/navigation_models.dart';
+import '../../bloc/auth_bloc.dart';
+import '../../const/go_button.dart';
+import '../../const/google_api.dart';
+import '../../controllers/navigation_controller.dart';
 
-class HomeContent extends StatelessWidget {
-  const HomeContent({super.key});
+import '../../services/station_service.dart';
+import '../../widgets/reusable_map_widget.dart';
+import '../../widgets/search_widget.dart';
+import '../../widgets/station_bottom_sheet.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomeContentModularState();
+}
+
+class _HomeContentModularState extends State<HomePage> {
+  late NavigationController _navigationController;
+  final StationService _stationService = StationService();
+  final TextEditingController _searchController = TextEditingController();
+  
+  List<DestinationStation> _stations = [];
+  bool _isFullscreenMap = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigationController = NavigationController();
+    _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    _navigationController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeApp() async {
+    await _navigationController.initialize();
+    _generateStations();
+  }
+
+  void _generateStations() {
+    if (_navigationController.currentPosition == null) return;
+
+    _stations = _stationService.generateDummyStations(
+      _navigationController.currentPosition!,
+      count: 10,
+      radiusKm: 10.0,
+    );
+
+    final stationMarkers = _stationService.createStationMarkers(
+      _stations,
+      _onStationTap,
+    );
+
+    _navigationController.addStationMarkers(stationMarkers);
+  }
+
+  void _onStationTap(DestinationStation station) {
+    // Show route to station
+    _navigationController.setDestination(station.position);
+    
+    // Show bottom sheet
+    StationBottomSheet.show(
+      context,
+      station: station,
+      currentPosition: _navigationController.currentPosition,
+      onSeeRoutes: () {
+        Navigator.pop(context);
+        _navigationController.startNavigation();
+      },
+      onBook: () {
+        Navigator.pop(context);
+        _bookStation(station);
+      },
+    );
+  }
+
+  Future<void> _bookStation(DestinationStation station) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Booking ${station.name}...'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    final success = await _stationService.bookStation(station);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success 
+                ? 'Successfully booked ${station.name}!'
+                : 'Booking failed. Please try again.',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPlaceSelected(String placeId, String description) async {
+    final url =
+        "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry,name&key=$googleApiKey";
+    
+    try {
+      final response = await http.get(Uri.parse(url));
+      final data = json.decode(response.body);
+
+      if (data['status'] == 'OK') {
+        final location = data['result']['geometry']['location'];
+        final destination = LatLng(location['lat'], location['lng']);
+        await _navigationController.setDestination(destination);
+      }
+    } catch (e) {
+      debugPrint('Place details error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _navigationController,
+      builder: (context, child) {
+        // Show navigation view if in navigation mode
+        if (_navigationController.isNavigationMode) {
+          return NavigationMapWidget(
+            currentPosition: _navigationController.currentPosition!,
+            markers: _navigationController.markers,
+            polylines: _navigationController.polylines,
+            currentStep: _navigationController.currentStep,
+            distanceKm: _navigationController.currentRoute?.distanceKm,
+            currentStepIndex: _navigationController.currentStepIndex,
+            totalSteps: _navigationController.currentRoute?.navSteps.length ?? 0,
+            onExitNavigation: () {
+              _navigationController.stopNavigation();
+            },
+          );
+        }
+
+        // Show fullscreen map if enabled
+        if (_isFullscreenMap) {
+          return _buildFullscreenMap();
+        }
+
+        // Show normal home content
+        return _buildHomeContent();
+      },
+    );
+  }
+
+  Widget _buildFullscreenMap() {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Full screen map
+          ReusableMapWidget(
+            initialPosition: _navigationController.currentPosition,
+            markers: _navigationController.markers,
+            polylines: _navigationController.polylines,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            zoom: 14.0,
+          ),
+
+          // Exit fullscreen button
+          Positioned(
+            top: 50,
+            right: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: () {
+                  setState(() {
+                    _isFullscreenMap = false;
+                  });
+                },
+                icon: const Icon(
+                  Icons.fullscreen_exit,
+                  color: Colors.black,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+
+          // Search bar
+          PositionedSearchWidget(
+            top: 50,
+            left: 16,
+            right: 80, // Leave space for exit button
+            hintText: 'Find swap stations',
+            onPlaceSelected: _onPlaceSelected,
+            controller: _searchController,
+          ),
+
+          // Start navigation button (if destination is selected)
+          if (_navigationController.destinationPosition != null)
+            Positioned(
+              bottom: 20,
+              left: 16,
+              right: 16,
+              child: GoButton(
+                onPressed: () {
+                  _navigationController.startNavigation();
+                },
+                text: "START NAVIGATION",
+                backgroundColor: Color(0xff0A2342),
+                textColor: Colors.white,
+                foregroundColor: const Color.fromARGB(255, 97, 81, 81),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeContent() {
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Greeting + Location
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      if (state is AuthSuccess) {
-                        return Text(
-                          'Hi ${state.customer.name},',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        );
-                      } else if (state is AuthLoading) {
-                        return const Text(
-                          'Hi ...',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        );
-                      } else {
-                        return const Text(
-                          'Hi Guest,',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'welcome',
-                    style: TextStyle(fontSize: 20, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: const [
-                      Icon(Icons.location_on_outlined, size: 18),
-                      SizedBox(width: 4),
-                      Text(
-                        'Manama, Dubai',
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 5),
+            // Greeting section
+            _buildGreetingSection(),
 
-            // Battery section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Baseline(
-                  baseline: 65,
-                  baselineType: TextBaseline.alphabetic,
-                  child: const Icon(Icons.battery_3_bar, size: 70),
-                ),
-                const SizedBox(width: 10),
-                Baseline(
-                  baseline: 65,
-                  baselineType: TextBaseline.alphabetic,
-                  child: const Text(
-                    '51',
-                    style: TextStyle(
-                      fontSize: 70,
-                      fontWeight: FontWeight.w600,
-                      height: 1,
-                    ),
+            // Distance display
+            if (_navigationController.currentRoute != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Distance: ${_navigationController.currentRoute!.distanceKm.toStringAsFixed(2)} km',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Baseline(
-                  baseline: 70,
-                  baselineType: TextBaseline.alphabetic,
-                  child: const Text(
-                    'km',
-                    style: TextStyle(fontSize: 24, height: 1),
-                  ),
-                ),
-              ],
-            ),
-
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: 0.55,
-                    minHeight: 8,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('55%', style: TextStyle(fontSize: 14)),
-                  ),
-                ],
               ),
-            ),
-            const SizedBox(height: 5),
 
-            // Map + Search 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'asset/home/map.png',
-                      width: double.infinity,
-                      height: 450,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+            const SizedBox(height: 10),
 
-                  // Search Bar
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Find swap stations',
-                          border: InputBorder.none,
-                          icon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                  ),
+            // Map + Search section
+            _buildMapSection(),
 
-                  // Swap Now Button
-                  Positioned(
-                    bottom: 16,
-                    left: 1,
-                    right: 1,
-                    child: GoButton(
-                      onPressed: () {},
-                      text: "SWAP NOW",
-                      backgroundColor: Colors.black,
-                      textColor: Colors.white,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
-}
 
+  Widget _buildGreetingSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              if (state is AuthSuccess) {
+                return Text(
+                  'Hi ${state.customer.name},',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              } else if (state is AuthLoading) {
+                return const Text(
+                  'Hi ...',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              } else {
+                return const Text(
+                  'Hi Guest,',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 4),
+          const Text('Welcome', style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                _navigationController.currentPosition != null
+                    ? '${_navigationController.currentPosition!.latitude.toStringAsFixed(4)}, ${_navigationController.currentPosition!.longitude.toStringAsFixed(4)}'
+                    : 'Fetching location...',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          
+          // Battery status
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Baseline(
+                baseline: 65,
+                baselineType: TextBaseline.alphabetic,
+                child: const Icon(Icons.battery_3_bar, size: 70),
+              ),
+              const SizedBox(width: 10),
+              Baseline(
+                baseline: 65,
+                baselineType: TextBaseline.alphabetic,
+                child: const Text(
+                  '51',
+                  style: TextStyle(
+                    fontSize: 70,
+                    fontWeight: FontWeight.w600,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Baseline(
+                baseline: 70,
+                baselineType: TextBaseline.alphabetic,
+                child: const Text(
+                  'km',
+                  style: TextStyle(fontSize: 24, height: 1),
+                ),
+              ),
+            ],
+          ),
+
+          // Progress bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: 0.55,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade300,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('55%', style: TextStyle(fontSize: 14)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 450,
+        child: Stack(
+          children: [
+            // Map
+            ReusableMapWidget(
+              initialPosition: _navigationController.currentPosition,
+              markers: _navigationController.markers,
+              polylines: _navigationController.polylines,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              zoom: 14.0,
+            ),
+
+            // Search bar
+            PositionedSearchWidget(
+              top: 16,
+              left: 16,
+              right: 16,
+              hintText: 'Find swap stations',
+              onPlaceSelected: _onPlaceSelected,
+              controller: _searchController,
+            ),
+
+            // Swap Now button
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: GoButton(
+                onPressed: () {
+                  if (_navigationController.destinationPosition != null) {
+                    setState(() {
+                      _isFullscreenMap = true;
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Please select a destination first."),
+                      ),
+                    );
+                  }
+                },
+                text: "Swap Now",
+                backgroundColor: Color(0xff0A2342),
+                textColor: Colors.white,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

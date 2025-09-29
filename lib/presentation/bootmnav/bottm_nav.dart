@@ -15,7 +15,7 @@ class _BottomNavState extends State<BottomNav> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeContent(),     // Make this full screen internally
+    const HomePage(),     // Make this full screen internally
     const StationScreen(),   // Also full screen internally
     const WalletScreen(),
     const AccountScreen(),

@@ -1,26 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/station/station_state.dart';
-import 'package:swap_app/presentation/station/routes_screen.dart';
 import 'package:swap_app/presentation/station/scan_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
+import 'package:swap_app/widgets/station_bottom_sheet.dart';
+import '../../controllers/navigation_controller.dart';
+import '../../widgets/reusable_map_widget.dart';
+import '../../services/station_service.dart';
+import '../../model/navigation_models.dart';
 
-class StationScreen extends StatelessWidget {
+class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
 
   @override
+  State<StationScreen> createState() => _StationScreenState();
+}
+
+class _StationScreenState extends State<StationScreen> {
+  late NavigationController _navigationController;
+  final StationService _stationService = StationService();
+  List<DestinationStation> _mapStations = [];
+  bool _isFullscreenNavigation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigationController = NavigationController();
+    _initializeMap();
+  }
+
+  @override
+  void dispose() {
+    _navigationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeMap() async {
+    await _navigationController.initialize();
+    _generateMapStations();
+  }
+
+  void _generateMapStations() {
+    if (_navigationController.currentPosition == null) return;
+
+    _mapStations = _stationService.generateDummyStations(
+      _navigationController.currentPosition!,
+      count: 15,
+      radiusKm: 25.0,
+    );
+
+    final stationMarkers = _stationService.createStationMarkers(
+      _mapStations,
+      _onMapStationTap,
+    );
+
+    _navigationController.addStationMarkers(stationMarkers);
+  }
+
+  void _onMapStationTap(DestinationStation station) {
+    // Show route to station
+    _navigationController.setDestination(station.position);
+    
+    // Show bottom sheet
+    StationBottomSheet.show(
+      context,
+      station: station,
+      currentPosition: _navigationController.currentPosition,
+      onSeeRoutes: () {
+        Navigator.pop(context);
+        setState(() {
+          _isFullscreenNavigation = true;
+        });
+        _navigationController.startNavigation();
+      },
+      onBook: () {
+        Navigator.pop(context);
+       
+      },
+    );
+  }
+
+  // Helper method to set station as destination for navigation
+  void _setStationAsDestination(dynamic station) {
+    // Convert the station from StationBloc to a LatLng position
+    // For now, we'll use a dummy position. In a real app, you'd have lat/lng in your station model
+    final stationPosition = LatLng(
+      _navigationController.currentPosition!.latitude + (0.01 * (station.hashCode % 10)),
+      _navigationController.currentPosition!.longitude + (0.01 * (station.hashCode % 10)),
+    );
+    _navigationController.setDestination(stationPosition);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _navigationController,
+      builder: (context, child) {
+        // Show full-screen navigation if active
+        if (_isFullscreenNavigation && _navigationController.isNavigationMode) {
+          return _buildFullscreenNavigation();
+        }
+
+        // Show normal station screen with map
+        return _buildStationScreen();
+      },
+    );
+  }
+
+  Widget _buildFullscreenNavigation() {
+    return NavigationMapWidget(
+      currentPosition: _navigationController.currentPosition!,
+      markers: _navigationController.markers,
+      polylines: _navigationController.polylines,
+      currentStep: _navigationController.currentStep,
+      distanceKm: _navigationController.currentRoute?.distanceKm,
+      currentStepIndex: _navigationController.currentStepIndex,
+      totalSteps: _navigationController.currentRoute?.navSteps.length ?? 0,
+      onExitNavigation: () {
+        setState(() {
+          _isFullscreenNavigation = false;
+        });
+        _navigationController.stopNavigation();
+      },
+    );
+  }
+
+  Widget _buildStationScreen() {
     return BlocProvider(
       create: (_) => StationBloc(StationRepository())..add(LoadStations()),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // Background Map
+            // Background Google Map
             Positioned.fill(
-              child: Image.asset("asset/home/map.png", fit: BoxFit.cover),
+              child: ReusableMapWidget(
+                initialPosition: _navigationController.currentPosition,
+                markers: _navigationController.markers,
+                polylines: _navigationController.polylines,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                compassEnabled: true,
+                zoom: 12.0,
+              ),
             ),
 
             // Top Gradient
@@ -32,7 +159,7 @@ class StationScreen extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.2), Colors.transparent],
+                    colors: [Colors.black.withValues(alpha: 0.2), Colors.transparent],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -319,13 +446,13 @@ class StationScreen extends StatelessWidget {
                           Expanded(
                             child: OutlinedButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const RoutesScreen(),
-                                  ),
-                                );
-                                // Handle see route
+                                Navigator.pop(context);
+                                // Set destination and show full-screen navigation
+                                _setStationAsDestination(station);
+                                setState(() {
+                                  _isFullscreenNavigation = true;
+                                });
+                                _navigationController.startNavigation();
                               },
                               style: OutlinedButton.styleFrom(
                                 shape: RoundedRectangleBorder(
