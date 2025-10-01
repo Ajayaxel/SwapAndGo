@@ -4,7 +4,6 @@ import 'package:swap_app/repo/station_repository.dart';
 import 'station_event.dart';
 import 'station_state.dart';
 
-
 class StationBloc extends Bloc<StationEvent, StationState> {
   final StationRepository repository;
 
@@ -12,10 +11,55 @@ class StationBloc extends Bloc<StationEvent, StationState> {
     on<LoadStations>((event, emit) async {
       emit(StationLoading());
       try {
-        final stations = await repository.fetchStations();
+        final stations = await repository.fetchStations(
+          search: event.search,
+          status: event.status,
+          city: event.city,
+          is24x7: event.is24x7,
+          isActive: event.isActive,
+          perPage: event.perPage,
+        );
         emit(StationLoaded(stations));
       } catch (e) {
         emit(StationError(e.toString()));
+      }
+    });
+
+    on<LoadStationById>((event, emit) async {
+      emit(StationLoading());
+      try {
+        final station = await repository.fetchStationById(event.stationId);
+        emit(SingleStationLoaded(station));
+      } catch (e) {
+        emit(StationError(e.toString()));
+      }
+    });
+
+    on<RefreshStations>((event, emit) async {
+      // Keep current stations while refreshing
+      if (state is StationLoaded) {
+        emit(StationRefreshing((state as StationLoaded).stations));
+      } else {
+        emit(StationLoading());
+      }
+      
+      try {
+        final stations = await repository.fetchStations(
+          search: event.search,
+          status: event.status,
+          city: event.city,
+          is24x7: event.is24x7,
+          isActive: event.isActive,
+          perPage: event.perPage,
+        );
+        emit(StationLoaded(stations));
+      } catch (e) {
+        // Keep previous stations on error
+        if (state is StationRefreshing) {
+          emit(StationError(e.toString(), (state as StationRefreshing).currentStations));
+        } else {
+          emit(StationError(e.toString()));
+        }
       }
     });
   }

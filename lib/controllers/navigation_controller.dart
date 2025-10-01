@@ -48,6 +48,29 @@ class NavigationController extends ChangeNotifier {
   /// Get current location
   Future<void> _getCurrentLocation() async {
     try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('Location services are disabled.');
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('Location permissions are denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('Location permissions are permanently denied, we cannot request permissions.');
+        return;
+      }
+
+      // Get current position
       final position = await _mapService.getCurrentLocation();
       _currentPosition = position;
       _updateCurrentLocationMarker();
@@ -113,8 +136,15 @@ class NavigationController extends ChangeNotifier {
   }
 
   /// Start navigation
-  void startNavigation() {
+  Future<void> startNavigation() async {
     if (_destinationPosition == null || _isNavigationActive) return;
+
+    // Check location permission before starting navigation
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      debugPrint('Location permission required for navigation');
+      return;
+    }
 
     _isNavigationActive = true;
     _isNavigationMode = true;

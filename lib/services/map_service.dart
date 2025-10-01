@@ -50,6 +50,25 @@ class MapService {
 
   /// Get current location
   Future<LatLng> getCurrentLocation() async {
+    // Check if location services are enabled
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled.');
+    }
+
+    // Check location permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception('Location permissions are permanently denied, we cannot request permissions.');
+    }
+
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -107,9 +126,22 @@ class MapService {
 
     // Parse turn-by-turn steps
     final List<NavStep> steps = [];
+    int totalDurationMinutes = 0;
+    double totalDistanceKm = 0.0;
+    
     try {
       if (route['legs'] != null && route['legs'].isNotEmpty) {
         final leg = route['legs'][0];
+        
+        // Get total duration and distance from the leg
+        if (leg['duration'] != null) {
+          totalDurationMinutes = (leg['duration']['value'] / 60).round();
+        }
+        if (leg['distance'] != null) {
+          totalDistanceKm = leg['distance']['value'] / 1000.0;
+        }
+        
+        // Parse individual steps
         final legSteps = leg['steps'] as List<dynamic>;
         for (final s in legSteps) {
           steps.add(NavStep.fromJson(s));
@@ -119,18 +151,26 @@ class MapService {
       debugPrint('Failed parsing steps: $e');
     }
 
-    final distance = calculateDistance(
-      start.latitude,
-      start.longitude,
-      end.latitude,
-      end.longitude,
-    );
+    // Fallback to calculated distance if API doesn't provide it
+    if (totalDistanceKm == 0.0) {
+      totalDistanceKm = calculateDistance(
+        start.latitude,
+        start.longitude,
+        end.latitude,
+        end.longitude,
+      );
+    }
+
+    // Fallback to estimated time if API doesn't provide it
+    if (totalDurationMinutes == 0) {
+      totalDurationMinutes = (totalDistanceKm * 2).round(); // Rough estimate
+    }
 
     return RouteInfo(
       polylinePoints: polylinePoints,
       navSteps: steps,
-      distanceKm: distance,
-      durationMinutes: (distance * 2).round(), // Rough estimate
+      distanceKm: totalDistanceKm,
+      durationMinutes: totalDurationMinutes,
     );
   }
 

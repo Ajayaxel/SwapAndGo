@@ -1,6 +1,4 @@
 // bloc/station_state.dart
-
-
 import 'package:swap_app/model/station_model.dart';
 
 abstract class StationState {}
@@ -14,8 +12,19 @@ class StationLoaded extends StationState {
   StationLoaded(this.stations);
 }
 
+class StationRefreshing extends StationState {
+  final List<Station> currentStations;
+  StationRefreshing(this.currentStations);
+}
+
+class SingleStationLoaded extends StationState {
+  final Station station;
+  SingleStationLoaded(this.station);
+}
+
 class StationError extends StationState {
   final String message;
-  StationError(this.message);
+  final List<Station>? previousStations;
+  StationError(this.message, [this.previousStations]);
 }
 

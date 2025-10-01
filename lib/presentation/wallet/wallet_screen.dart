@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:swap_app/bloc/wallet/wallet_bloc.dart';
 import 'package:swap_app/const/conts_colors.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/wallet/payment_screen.dart';
@@ -17,12 +19,14 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+    return BlocProvider(
+      create: (context) => WalletBloc(),
+      child: SafeArea(
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
             children: [
               Align(
                 alignment: Alignment.centerLeft,
@@ -182,7 +186,7 @@ class WalletScreen extends StatelessWidget {
 
                         // Handle payment action
                       },
-                      text: 'Pay AED 36.50',
+                      text: 'Add cash on wallet',
                       backgroundColor: AppColors.goBlue,
                       textColor: Colors.white,
                       foregroundColor: Colors.white,
@@ -194,7 +198,8 @@ class WalletScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Pay Button
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -202,8 +207,16 @@ class WalletScreen extends StatelessWidget {
   }
 }
 
-class PaymentBottomSheet extends StatelessWidget {
+class PaymentBottomSheet extends StatefulWidget {
   const PaymentBottomSheet({super.key});
+
+  @override
+  State<PaymentBottomSheet> createState() => _PaymentBottomSheetState();
+}
+
+class _PaymentBottomSheetState extends State<PaymentBottomSheet> {
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -244,22 +257,35 @@ class PaymentBottomSheet extends StatelessWidget {
 
             // Description
             const Text(
-              'Clear your dues of AED36.50.\nThis will renew your balance to full amount',
+              'Add funds to your wallet',
               style: TextStyle(fontSize: 14, color: Color(0xff0E0E0E)),
               textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 40),
+
+
+
+
+            const SizedBox(height: 24),
 
             // Continue Button
-            GoButton(
-              onPressed: () {
-             Navigator.push(context, MaterialPageRoute(builder: (context) => const PaymentScreen()));
-              },
-              text: 'Continue',
-              backgroundColor: AppColors.goBlue,
-              textColor: Colors.white,
-              foregroundColor: Colors.white,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: GoButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentScreen(),
+                    ),
+                  );
+                },
+                text: 'Continue to Payment',
+                backgroundColor: AppColors.goBlue,
+                textColor: Colors.white,
+                foregroundColor: Colors.white,
+              ),
             ),
             const SizedBox(height: 20),
           ],

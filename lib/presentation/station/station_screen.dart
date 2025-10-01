@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/station/station_state.dart';
 import 'package:swap_app/presentation/station/scan_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
-import 'package:swap_app/widgets/station_bottom_sheet.dart';
 import '../../controllers/navigation_controller.dart';
 import '../../widgets/reusable_map_widget.dart';
-import '../../services/station_service.dart';
-import '../../model/navigation_models.dart';
+import '../../services/real_station_service.dart';
+import '../../model/station_model.dart';
+
 
 class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
@@ -21,8 +20,7 @@ class StationScreen extends StatefulWidget {
 
 class _StationScreenState extends State<StationScreen> {
   late NavigationController _navigationController;
-  final StationService _stationService = StationService();
-  List<DestinationStation> _mapStations = [];
+  final RealStationService _realStationService = RealStationService();
   bool _isFullscreenNavigation = false;
 
   @override
@@ -40,58 +38,31 @@ class _StationScreenState extends State<StationScreen> {
 
   Future<void> _initializeMap() async {
     await _navigationController.initialize();
-    _generateMapStations();
+    // Stations will be loaded when the bloc loads them
   }
 
-  void _generateMapStations() {
+  void _onMapStationTap(Station station) {
+    // Show route to station
+    _navigationController.setDestination(station.position);
+    
+    // Show bottom sheet with real station data
+    _showStationModal(context, station);
+  }
+
+  void _updateMapMarkers(List<Station> stations) {
     if (_navigationController.currentPosition == null) return;
 
-    _mapStations = _stationService.generateDummyStations(
-      _navigationController.currentPosition!,
-      count: 15,
-      radiusKm: 25.0,
-    );
-
-    final stationMarkers = _stationService.createStationMarkers(
-      _mapStations,
+    final stationMarkers = _realStationService.createStationMarkers(
+      stations,
       _onMapStationTap,
     );
 
     _navigationController.addStationMarkers(stationMarkers);
   }
 
-  void _onMapStationTap(DestinationStation station) {
-    // Show route to station
-    _navigationController.setDestination(station.position);
-    
-    // Show bottom sheet
-    StationBottomSheet.show(
-      context,
-      station: station,
-      currentPosition: _navigationController.currentPosition,
-      onSeeRoutes: () {
-        Navigator.pop(context);
-        setState(() {
-          _isFullscreenNavigation = true;
-        });
-        _navigationController.startNavigation();
-      },
-      onBook: () {
-        Navigator.pop(context);
-       
-      },
-    );
-  }
-
   // Helper method to set station as destination for navigation
-  void _setStationAsDestination(dynamic station) {
-    // Convert the station from StationBloc to a LatLng position
-    // For now, we'll use a dummy position. In a real app, you'd have lat/lng in your station model
-    final stationPosition = LatLng(
-      _navigationController.currentPosition!.latitude + (0.01 * (station.hashCode % 10)),
-      _navigationController.currentPosition!.longitude + (0.01 * (station.hashCode % 10)),
-    );
-    _navigationController.setDestination(stationPosition);
+  void _setStationAsDestination(Station station) {
+    _navigationController.setDestination(station.position);
   }
 
   @override
@@ -196,12 +167,31 @@ class _StationScreenState extends State<StationScreen> {
                     if (state is StationLoading) {
                       return const Center(child: CircularProgressIndicator());
                     } else if (state is StationLoaded) {
+                      // Update map markers when stations are loaded
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _updateMapMarkers(state.stations);
+                      });
+                      
                       return ListView.builder(
                         controller: controller,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: state.stations.length,
                         itemBuilder: (context, index) {
                           final station = state.stations[index];
+                          
+                          // Calculate distance from current position
+                          double distance = 0.0;
+                          String timeText = station.is24x7 ? "24x7" : "Limited";
+                          
+                          if (_navigationController.currentPosition != null) {
+                            distance = _realStationService.calculateDistance(
+                              _navigationController.currentPosition!.latitude,
+                              _navigationController.currentPosition!.longitude,
+                              station.position.latitude,
+                              station.position.longitude,
+                            );
+                          }
+                          
                           return Padding(
                             padding: const EdgeInsets.only(top: 16),
                             child: GestureDetector(
@@ -210,13 +200,9 @@ class _StationScreenState extends State<StationScreen> {
                               },
                               child: stationCard(
                                 context: context,
-                                title: station.name,
-                                address: station.address,
-                                distance:
-                                    "0 km", // TODO: calculate from location
-                                time: station.is24x7 ? "24x7" : "Limited",
-                                available:
-                                    "${station.availableSlots}/${station.capacity}",
+                                station: station,
+                                distance: distance,
+                                time: timeText,
                               ),
                             ),
                           );
@@ -236,13 +222,28 @@ class _StationScreenState extends State<StationScreen> {
     );
   }
 
-  void _showStationModal(BuildContext context, dynamic station) {
+  void _showStationModal(BuildContext context, Station station) {
+    // Calculate distance and time
+    double distance = 0.0;
+    int estimatedMinutes = 0;
+    
+    if (_navigationController.currentPosition != null) {
+      distance = _realStationService.calculateDistance(
+        _navigationController.currentPosition!.latitude,
+        _navigationController.currentPosition!.longitude,
+        station.position.latitude,
+        station.position.longitude,
+      );
+      // Estimate time based on distance (average speed 30 km/h)
+      estimatedMinutes = (distance * 2).round();
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.45,
+        height: MediaQuery.of(context).size.height * 0.5,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -267,8 +268,8 @@ class _StationScreenState extends State<StationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Logo
-                  Image(
-                    image: AssetImage("asset/home/smallogo.png"),
+                  Image.asset(
+                    "asset/home/smallogo.png",
                     height: 30,
                     width: 75,
                   ),
@@ -313,15 +314,15 @@ class _StationScreenState extends State<StationScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text(
-                              '0 m',
-                              style: TextStyle(
+                            Text(
+                              '${distance.toStringAsFixed(1)} km',
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              '0 min away',
+                              '$estimatedMinutes min away',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -336,7 +337,7 @@ class _StationScreenState extends State<StationScreen> {
 
                     // Address
                     Text(
-                      station.address.toUpperCase(),
+                      '${station.address}, ${station.city}, ${station.state}',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
 
@@ -414,16 +415,16 @@ class _StationScreenState extends State<StationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Price',
+                                'Type',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey[600],
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'AED 1/min+Tax',
-                                style: TextStyle(
+                              Text(
+                                station.type,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -433,6 +434,32 @@ class _StationScreenState extends State<StationScreen> {
                         ),
                       ],
                     ),
+                    
+                    // Contact info if available
+                    if (station.contactNumber.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.phone, size: 16, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Contact: ${station.contactNumber}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    
                     const SizedBox(height: 20),
                     const Divider(color: Color(0xffE6EAED), thickness: 2),
 
@@ -458,13 +485,13 @@ class _StationScreenState extends State<StationScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                side: BorderSide(color: Color(0xFF0A2342)),
+                                side: const BorderSide(color: Color(0xFF0A2342)),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                               ),
                               child: const Text(
-                                'See route',
+                                'See Routes',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontWeight: FontWeight.bold,
@@ -494,7 +521,7 @@ class _StationScreenState extends State<StationScreen> {
                                 ),
                               ),
                               child: const Text(
-                                'Contact',
+                                'Book',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -517,11 +544,9 @@ class _StationScreenState extends State<StationScreen> {
 
   Widget stationCard({
     required BuildContext context,
-    required String title,
-    required String address,
-    required String distance,
+    required Station station,
+    required double distance,
     required String time,
-    required String available,
   }) {
     return Card(
       color: Colors.white,
@@ -545,7 +570,7 @@ class _StationScreenState extends State<StationScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      title,
+                      station.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -557,7 +582,7 @@ class _StationScreenState extends State<StationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      distance,
+                      '${distance.toStringAsFixed(1)} km',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -570,7 +595,7 @@ class _StationScreenState extends State<StationScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              address,
+              '${station.address}, ${station.city}',
               style: const TextStyle(fontSize: 13, color: Colors.black54),
             ),
             const SizedBox(height: 12),
@@ -579,8 +604,8 @@ class _StationScreenState extends State<StationScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 infoBox(label: 'Timings', value: time),
-                infoBox(label: 'Station', value: available),
-                infoBox(label: 'Price', value: 'AED 1/min+Tax'),
+                infoBox(label: 'Station', value: '${station.availableSlots}/${station.capacity}'),
+                infoBox(label: 'Type', value: station.type),
               ],
             ),
             const SizedBox(height: 12),

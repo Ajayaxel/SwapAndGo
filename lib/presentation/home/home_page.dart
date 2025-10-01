@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:swap_app/model/navigation_models.dart';
+import 'package:swap_app/model/station_model.dart';
+import 'package:swap_app/bloc/station/station_bloc.dart';
+import 'package:swap_app/bloc/station/station_event.dart';
+import 'package:swap_app/bloc/station/station_state.dart';
+import 'package:swap_app/repo/station_repository.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../const/go_button.dart';
 import '../../const/google_api.dart';
 import '../../controllers/navigation_controller.dart';
 
-import '../../services/station_service.dart';
+import '../../services/real_station_service.dart';
 import '../../widgets/reusable_map_widget.dart';
 import '../../widgets/search_widget.dart';
 import '../../widgets/station_bottom_sheet.dart';
@@ -23,10 +27,9 @@ class HomePage extends StatefulWidget {
 
 class _HomeContentModularState extends State<HomePage> {
   late NavigationController _navigationController;
-  final StationService _stationService = StationService();
+  final RealStationService _realStationService = RealStationService();
   final TextEditingController _searchController = TextEditingController();
   
-  List<DestinationStation> _stations = [];
   bool _isFullscreenMap = false;
 
   @override
@@ -45,34 +48,23 @@ class _HomeContentModularState extends State<HomePage> {
 
   Future<void> _initializeApp() async {
     await _navigationController.initialize();
-    _generateStations();
+    // Stations will be loaded via BlocProvider
   }
 
-  void _generateStations() {
-    if (_navigationController.currentPosition == null) return;
-
-    _stations = _stationService.generateDummyStations(
-      _navigationController.currentPosition!,
-      count: 10,
-      radiusKm: 10.0,
-    );
-
-    final stationMarkers = _stationService.createStationMarkers(
-      _stations,
-      _onStationTap,
-    );
-
-    _navigationController.addStationMarkers(stationMarkers);
-  }
-
-  void _onStationTap(DestinationStation station) {
+  void _onStationTap(Station station) {
     // Show route to station
     _navigationController.setDestination(station.position);
+    
+    // Convert to DestinationStation for the bottom sheet
+    final destinationStation = _realStationService.convertToDestinationStation(
+      station,
+      _navigationController.currentPosition,
+    );
     
     // Show bottom sheet
     StationBottomSheet.show(
       context,
-      station: station,
+      station: destinationStation,
       currentPosition: _navigationController.currentPosition,
       onSeeRoutes: () {
         Navigator.pop(context);
@@ -85,7 +77,7 @@ class _HomeContentModularState extends State<HomePage> {
     );
   }
 
-  Future<void> _bookStation(DestinationStation station) async {
+  Future<void> _bookStation(Station station) async {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Booking ${station.name}...'),
@@ -94,21 +86,29 @@ class _HomeContentModularState extends State<HomePage> {
       ),
     );
 
-    final success = await _stationService.bookStation(station);
+    // Simulate booking success
+    await Future.delayed(const Duration(seconds: 2));
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            success 
-                ? 'Successfully booked ${station.name}!'
-                : 'Booking failed. Please try again.',
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
+          content: Text('Successfully booked ${station.name}!'),
+          backgroundColor: Colors.green,
           duration: const Duration(seconds: 3),
         ),
       );
     }
+  }
+
+  void _updateMapMarkers(List<Station> stations) {
+    if (_navigationController.currentPosition == null) return;
+
+    final stationMarkers = _realStationService.createStationMarkers(
+      stations,
+      _onStationTap,
+    );
+
+    _navigationController.addStationMarkers(stationMarkers);
   }
 
   Future<void> _onPlaceSelected(String placeId, String description) async {
@@ -131,33 +131,43 @@ class _HomeContentModularState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _navigationController,
-      builder: (context, child) {
-        // Show navigation view if in navigation mode
-        if (_navigationController.isNavigationMode) {
-          return NavigationMapWidget(
-            currentPosition: _navigationController.currentPosition!,
-            markers: _navigationController.markers,
-            polylines: _navigationController.polylines,
-            currentStep: _navigationController.currentStep,
-            distanceKm: _navigationController.currentRoute?.distanceKm,
-            currentStepIndex: _navigationController.currentStepIndex,
-            totalSteps: _navigationController.currentRoute?.navSteps.length ?? 0,
-            onExitNavigation: () {
-              _navigationController.stopNavigation();
-            },
-          );
-        }
+    return BlocProvider(
+      create: (_) => StationBloc(StationRepository())..add(LoadStations()),
+      child: BlocListener<StationBloc, StationState>(
+        listener: (context, state) {
+          if (state is StationLoaded) {
+            _updateMapMarkers(state.stations);
+          }
+        },
+        child: ListenableBuilder(
+          listenable: _navigationController,
+          builder: (context, child) {
+            // Show navigation view if in navigation mode
+            if (_navigationController.isNavigationMode) {
+              return NavigationMapWidget(
+                currentPosition: _navigationController.currentPosition!,
+                markers: _navigationController.markers,
+                polylines: _navigationController.polylines,
+                currentStep: _navigationController.currentStep,
+                distanceKm: _navigationController.currentRoute?.distanceKm,
+                currentStepIndex: _navigationController.currentStepIndex,
+                totalSteps: _navigationController.currentRoute?.navSteps.length ?? 0,
+                onExitNavigation: () {
+                  _navigationController.stopNavigation();
+                },
+              );
+            }
 
-        // Show fullscreen map if enabled
-        if (_isFullscreenMap) {
-          return _buildFullscreenMap();
-        }
+            // Show fullscreen map if enabled
+            if (_isFullscreenMap) {
+              return _buildFullscreenMap();
+            }
 
-        // Show normal home content
-        return _buildHomeContent();
-      },
+            // Show normal home content
+            return _buildHomeContent();
+          },
+        ),
+      ),
     );
   }
 

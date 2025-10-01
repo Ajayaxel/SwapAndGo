@@ -8,9 +8,24 @@
 
     <!-- Location usage for Google Maps -->
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>We need your location to show nearby rides</string>
+    <string>We need your location to show nearby battery swap stations and navigation</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>We use your location to track rides even when the app is in the background</string>
+    <string>We use your location to track rides and find nearby stations even when the app is in the background</string>
+    
+    <!-- Internet access permissions -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>localhost</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
 
     <!-- Flutter & app configs -->
     <key>CADisableMinimumFrameDurationOnPhone</key>

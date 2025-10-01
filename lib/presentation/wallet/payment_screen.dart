@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:swap_app/bloc/wallet/wallet_bloc.dart';
+import 'package:swap_app/bloc/wallet/wallet_event.dart';
+import 'package:swap_app/bloc/wallet/wallet_state.dart';
 import 'package:swap_app/const/conts_colors.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/account/my_profile.dart';
 import 'package:swap_app/presentation/bootmnav/bottm_nav.dart';
+import 'package:swap_app/presentation/wallet/payment_webview_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -14,6 +19,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   bool _isPayitSelected = false;
   final TextEditingController _payitController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   // Exit bottom sheet
   void _showExitBottomSheet(BuildContext context) {
@@ -99,155 +105,65 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // Confirm / loading bottom sheet
-  void _continueBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return WillPopScope(
-          // Handle back button to show exit sheet
-          onWillPop: () async {
-            Navigator.of(context).pop(); // Close confirm sheet
-            _showExitBottomSheet(context); // Show exit sheet
-            return false;
-          },
-          child: SizedBox(
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    "asset/home/Ellipse 2836.png",
-                    height: 100,
-                    width: 100,
-                    fit: BoxFit.cover,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    textAlign: TextAlign.center,
-                    "Open your Payit app and\nconfirm the Payment",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.goBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    textAlign: TextAlign.center,
-                    "Please accept the payment request from\nSwap & Go on your phone",
-                    style: TextStyle(fontSize: 14, color: Colors.black),
-                  ),
-                  const SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        _successBottomSheet(context);
-                      });
-                    },
-                    child: Text(
-                      "Loading...",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.goBlue,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  GoButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close confirm sheet
-                      _showExitBottomSheet(context); // Show exit sheet
-                    },
-                    text: "Cancel payment",
-                    backgroundColor: AppColors.goBlue,
-                    textColor: Colors.white,
-                    foregroundColor: Colors.white,
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // Initiate payment with API
+  void _initiatePayment(BuildContext context) {
+    final amount = double.tryParse(_amountController.text);
+    
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid amount'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-  // Success bottom sheet
-  void _successBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Image.asset(
-                  "asset/home/paymentsucces.png",
-                  height: 100,
-                  width: 100,
-                  fit: BoxFit.cover,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  textAlign: TextAlign.center,
-                  "Payment Successfully",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.goBlue,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  textAlign: TextAlign.center,
-                  "Lorem Ipsum is simply dummy text",
-                  style: TextStyle(fontSize: 14, color: Colors.black),
-                ),
-                const SizedBox(height: 20),
-                GoButton(
-                  onPressed: () {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (context) => const BottomNav(),
-                      ),
-                      (route) => false,
-                    );
-                  },
-                  text: "Back to Home",
-                  backgroundColor: AppColors.goBlue,
-                  textColor: Colors.white,
-                  foregroundColor: Colors.white,
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    // Trigger deposit event
+    context.read<WalletBloc>().add(DepositCashEvent(amount: amount));
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => WalletBloc(),
+      child: BlocListener<WalletBloc, WalletState>(
+        listener: (context, state) {
+          if (state is WalletDepositSuccess) {
+            print('🚀 Navigating to payment iframe...');
+            print('📍 iframe URL: ${state.depositResponse.data.iframeUrl}');
+            // Navigate to WebView screen with iframe URL from API
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => PaymentWebViewScreen(
+                  iframeUrl: state.depositResponse.data.iframeUrl,
+                  paymentId: state.depositResponse.data.paymentId,
+                  amount: state.depositResponse.data.amount,
+                ),
+              ),
+            );
+          } else if (state is WalletError) {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: BlocBuilder<WalletBloc, WalletState>(
+          builder: (context, state) {
+            return _buildPaymentScreen(context, state);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentScreen(BuildContext context, WalletState state) {
+    final isLoading = state is WalletLoading;
+    
     return WillPopScope(
       onWillPop: () async {
         _showExitBottomSheet(context);
@@ -303,7 +219,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Column(
+                    child:  Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -315,12 +231,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                         ),
                         SizedBox(height: 6),
-                        Text(
-                          "AED 36.50",
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                        TextFormField(
+                          controller: _amountController,
+                          keyboardType: TextInputType.number,
+                          decoration:  InputDecoration(
+                            hintText: 'Enter amount (AED)',
+                            prefixText: 'AED ',
                           ),
                         ),
                       ],
@@ -442,15 +358,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(
                 children: [
-                  const Text(
-                    'AED 36.50',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    _amountController.text.isNotEmpty
+                        ? 'AED ${_amountController.text}'
+                        : 'AED 0.00',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   Expanded(
                     child: GoButton(
-                      onPressed: () => _continueBottomSheet(context),
-                      text: "Continue",
+                      onPressed: isLoading ? null : () => _initiatePayment(context),
+                      text: isLoading ? "Processing..." : "Continue",
                       backgroundColor: AppColors.goBlue,
                       textColor: Colors.white,
                       foregroundColor: Colors.white,
