@@ -20,8 +20,12 @@ class StationBloc extends Bloc<StationEvent, StationState> {
           perPage: event.perPage,
         );
         emit(StationLoaded(stations));
+      } on StationApiException catch (e) {
+        print('❌ Station API Error: ${e.message}');
+        emit(StationError(e.message));
       } catch (e) {
-        emit(StationError(e.toString()));
+        print('❌ Unexpected error in LoadStations: $e');
+        emit(StationError('An unexpected error occurred: ${e.toString()}'));
       }
     });
 
@@ -30,8 +34,12 @@ class StationBloc extends Bloc<StationEvent, StationState> {
       try {
         final station = await repository.fetchStationById(event.stationId);
         emit(SingleStationLoaded(station));
+      } on StationApiException catch (e) {
+        print('❌ Station API Error: ${e.message}');
+        emit(StationError(e.message));
       } catch (e) {
-        emit(StationError(e.toString()));
+        print('❌ Unexpected error in LoadStationById: $e');
+        emit(StationError('An unexpected error occurred: ${e.toString()}'));
       }
     });
 
@@ -53,12 +61,21 @@ class StationBloc extends Bloc<StationEvent, StationState> {
           perPage: event.perPage,
         );
         emit(StationLoaded(stations));
-      } catch (e) {
+      } on StationApiException catch (e) {
+        print('❌ Station API Error during refresh: ${e.message}');
         // Keep previous stations on error
         if (state is StationRefreshing) {
-          emit(StationError(e.toString(), (state as StationRefreshing).currentStations));
+          emit(StationError(e.message, (state as StationRefreshing).currentStations));
         } else {
-          emit(StationError(e.toString()));
+          emit(StationError(e.message));
+        }
+      } catch (e) {
+        print('❌ Unexpected error in RefreshStations: $e');
+        // Keep previous stations on error
+        if (state is StationRefreshing) {
+          emit(StationError('An unexpected error occurred: ${e.toString()}', (state as StationRefreshing).currentStations));
+        } else {
+          emit(StationError('An unexpected error occurred: ${e.toString()}'));
         }
       }
     });

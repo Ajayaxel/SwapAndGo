@@ -31,12 +31,21 @@ class WalletPaymentCompleted extends WalletState {
   List<Object?> get props => [message];
 }
 
-class WalletError extends WalletState {
-  final String message;
+class WalletBalanceLoaded extends WalletState {
+  final WalletBalanceResponse balanceResponse;
 
-  const WalletError({required this.message});
+  const WalletBalanceLoaded({required this.balanceResponse});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [balanceResponse];
+}
+
+class WalletError extends WalletState {
+  final String message;
+  final int ?statusCode;
+  const WalletError({required this.message, this.statusCode});
+
+  @override
+  List<Object?> get props => [message, statusCode];
 }
 

@@ -62,6 +62,9 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
               ),
             );
           },
+          onUrlChange: (change) {
+            print('🔄 URL changed: ${change.url}');
+          },
         ),
       )
       ..loadHtmlString(

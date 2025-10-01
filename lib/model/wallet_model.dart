@@ -1,4 +1,76 @@
 // wallet_model.dart
+class WalletBalanceResponse {
+  final bool success;
+  final WalletBalanceData data;
+  final String message;
+
+  WalletBalanceResponse({
+    required this.success,
+    required this.data,
+    required this.message,
+  });
+
+  factory WalletBalanceResponse.fromJson(Map<String, dynamic> json) {
+    return WalletBalanceResponse(
+      success: json['success'] ?? false,
+      data: WalletBalanceData.fromJson(json['data']),
+      message: json['message'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      'data': data.toJson(),
+      'message': message,
+    };
+  }
+}
+
+class WalletBalanceData {
+  final int walletId;
+  final String balance;
+  final int availableBalance;
+  final String reservedBalance;
+  final String currency;
+  final String status;
+  final String lastTransactionAt;
+
+  WalletBalanceData({
+    required this.walletId,
+    required this.balance,
+    required this.availableBalance,
+    required this.reservedBalance,
+    required this.currency,
+    required this.status,
+    required this.lastTransactionAt,
+  });
+
+  factory WalletBalanceData.fromJson(Map<String, dynamic> json) {
+    return WalletBalanceData(
+      walletId: json['wallet_id'] ?? 0,
+      balance: json['balance'] ?? '0.00',
+      availableBalance: json['available_balance'] ?? 0,
+      reservedBalance: json['reserved_balance'] ?? '0.00',
+      currency: json['currency'] ?? 'EGP',
+      status: json['status'] ?? 'active',
+      lastTransactionAt: json['last_transaction_at'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'wallet_id': walletId,
+      'balance': balance,
+      'available_balance': availableBalance,
+      'reserved_balance': reservedBalance,
+      'currency': currency,
+      'status': status,
+      'last_transaction_at': lastTransactionAt,
+    };
+  }
+}
+
 class WalletDepositResponse {
   final bool success;
   final WalletDepositData data;

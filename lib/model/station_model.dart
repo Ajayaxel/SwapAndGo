@@ -1,6 +1,69 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 // models/station_model.dart
+
+/// Operating hours model for stations
+class OperatingHours {
+  final Map<String, DayHours> days;
+
+  OperatingHours({required this.days});
+
+  factory OperatingHours.fromJson(Map<String, dynamic> json) {
+    final Map<String, DayHours> days = {};
+    for (final entry in json.entries) {
+      days[entry.key] = DayHours.fromJson(entry.value);
+    }
+    return OperatingHours(days: days);
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> result = {};
+    for (final entry in days.entries) {
+      result[entry.key] = entry.value.toJson();
+    }
+    return result;
+  }
+
+  @override
+  String toString() {
+    return days.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join(', ');
+  }
+}
+
+class DayHours {
+  final bool enabled;
+  final String startTime;
+  final String endTime;
+
+  DayHours({
+    required this.enabled,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  factory DayHours.fromJson(Map<String, dynamic> json) {
+    return DayHours(
+      enabled: json['enabled'] ?? false,
+      startTime: json['start_time'] ?? '',
+      endTime: json['end_time'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'enabled': enabled,
+      'start_time': startTime,
+      'end_time': endTime,
+    };
+  }
+
+  @override
+  String toString() {
+    return enabled ? '$startTime - $endTime' : 'Closed';
+  }
+}
 class Station {
   final String id;
   final String name;
@@ -18,7 +81,7 @@ class Station {
   final int capacity;
   final int availableSlots;
   final bool is24x7;
-  final String? operatingHours;
+  final OperatingHours? operatingHours;
   final String status;
   final bool isActive;
   final String? notes;
@@ -72,7 +135,9 @@ class Station {
       capacity: json['capacity'] ?? 0,
       availableSlots: json['available_slots'] ?? 0,
       is24x7: json['is_24_7'] ?? false,
-      operatingHours: json['operating_hours'],
+      operatingHours: json['operating_hours'] != null 
+          ? OperatingHours.fromJson(json['operating_hours']) 
+          : null,
       status: json['status'] ?? '',
       isActive: json['is_active'] ?? false,
       notes: json['notes'],
