@@ -16,6 +16,7 @@ class ReusableMapWidget extends StatefulWidget {
   final double zoom;
   final double? tilt;
   final double? bearing;
+  final LatLngBounds? bounds;
   final Function(GoogleMapController)? onMapCreated;
   final VoidCallback? onMapTap;
 
@@ -32,6 +33,7 @@ class ReusableMapWidget extends StatefulWidget {
     this.zoom = 14.0,
     this.tilt,
     this.bearing,
+    this.bounds,
     this.onMapCreated,
     this.onMapTap,
   });
@@ -42,6 +44,31 @@ class ReusableMapWidget extends StatefulWidget {
 
 class _ReusableMapWidgetState extends State<ReusableMapWidget> {
   final Completer<GoogleMapController> _controller = Completer();
+  LatLngBounds? _lastBounds;
+
+  @override
+  void didUpdateWidget(ReusableMapWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Update camera bounds if bounds have changed
+    if (widget.bounds != null && widget.bounds != _lastBounds) {
+      _lastBounds = widget.bounds;
+      _updateCameraBounds();
+    }
+  }
+
+  Future<void> _updateCameraBounds() async {
+    if (widget.bounds == null) return;
+    
+    try {
+      final controller = await _controller.future;
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(widget.bounds!, 100.0),
+      );
+    } catch (e) {
+      debugPrint('Error updating camera bounds: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

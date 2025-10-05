@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:swap_app/services/storage_helper.dart';
 import '../model/qr_code_model.dart';
@@ -27,6 +28,7 @@ class QrCodeService {
         },
         body: jsonEncode(request.toJson()),
       );
+      // for debug mode
       // if(kDebugMode){
       //   return QrCodeCheckoutResponse(
       //     success: true,

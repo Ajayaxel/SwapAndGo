@@ -82,9 +82,15 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   }
 
   void _checkPaymentStatus(String url) {
+     print("url123 "+url);
     // Check if URL contains success indicators
-    if (url.contains('success') || url.contains('callback') || url.contains('completed')) {
-      // _showSuccessBottomSheet();
+    if (url.contains('success=true')) {
+     
+      // Navigator.of(context).pushAndRemoveUntil(
+      //   MaterialPageRoute(builder: (context) => const BottomNav()),
+      //   (route) => false,
+      // );
+      _showSuccessBottomSheet();
     } else if (url.contains('cancel') || url.contains('failed')) {
       _showFailureBottomSheet();
     }

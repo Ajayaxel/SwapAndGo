@@ -62,16 +62,28 @@ class RealStationService {
     final Set<Marker> markers = {};
 
     for (final station in stations) {
+      // Choose marker color based on availability
+      BitmapDescriptor markerIcon;
+      if (station.availableSlots == 0) {
+        markerIcon = _mapService.stationIcon ?? 
+                    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+      } else if (station.availableSlots <= 2) {
+        markerIcon = _mapService.stationIcon ?? 
+                    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+      } else {
+        markerIcon = _mapService.stationIcon ?? 
+                    BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      }
+
       markers.add(
         Marker(
-          markerId: MarkerId(station.id),
+          markerId: MarkerId('station_${station.id}'),
           position: station.position,
-          icon: _mapService.stationIcon ?? 
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: markerIcon,
           onTap: () => onTap(station),
           infoWindow: InfoWindow(
             title: station.name,
-            snippet: '${station.type} • ${station.availableSlots} slots available',
+            snippet: '${station.type} • ${station.availableSlots}/${station.capacity} slots • ${station.is24x7 ? "24/7" : "Limited hours"}',
           ),
         ),
       );

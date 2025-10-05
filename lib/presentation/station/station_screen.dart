@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/station/station_state.dart';
 import 'package:swap_app/presentation/station/scan_screen.dart';
-import 'package:swap_app/presentation/station/scan_suceess_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import '../../controllers/navigation_controller.dart';
 import '../../widgets/reusable_map_widget.dart';
@@ -13,9 +13,7 @@ import '../../model/station_model.dart';
 
 
   final GlobalKey<StationScreenState> stationScreenKey =
-      GlobalKey<StationScreenState>();
-
-
+GlobalKey<StationScreenState>();
 class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
    
@@ -28,6 +26,7 @@ class StationScreenState extends State<StationScreen> {
   late NavigationController _navigationController;
   final RealStationService _realStationService = RealStationService();
   bool _isFullscreenNavigation = false;
+  LatLngBounds? _stationBounds;
 
 
   @override
@@ -47,24 +46,51 @@ class StationScreenState extends State<StationScreen> {
     await _navigationController.initialize();
     // Stations will be loaded when the bloc loads them
   }
-
+  /// near by station tap on google map function
   void _onMapStationTap(Station station) {
-    // Show route to station
-    _navigationController.setDestination(station.position);
-    
-    // Show bottom sheet with real station data
-    // showStationModal(context, station);
+    // Show station modal when tapped
+    showStationModal(context, station);
   }
 
   void _updateMapMarkers(List<Station> stations) {
-    if (_navigationController.currentPosition != null) return;
-
     final stationMarkers = _realStationService.createStationMarkers(
       stations,
       _onMapStationTap,
     );
 
     _navigationController.addStationMarkers(stationMarkers);
+    
+    // Update map bounds to show all stations
+    if (stations.isNotEmpty) {
+      _updateMapBounds(stations);
+    }
+  }
+
+  void _updateMapBounds(List<Station> stations) {
+    if (stations.isEmpty) return;
+
+    double minLat = stations.first.position.latitude;
+    double maxLat = stations.first.position.latitude;
+    double minLng = stations.first.position.longitude;
+    double maxLng = stations.first.position.longitude;
+
+    for (final station in stations) {
+      minLat = minLat < station.position.latitude ? minLat : station.position.latitude;
+      maxLat = maxLat > station.position.latitude ? maxLat : station.position.latitude;
+      minLng = minLng < station.position.longitude ? minLng : station.position.longitude;
+      maxLng = maxLng > station.position.longitude ? maxLng : station.position.longitude;
+    }
+
+    // Add padding to bounds
+    final latPadding = (maxLat - minLat) * 0.1;
+    final lngPadding = (maxLng - minLng) * 0.1;
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat - latPadding, minLng - lngPadding),
+      northeast: LatLng(maxLat + latPadding, maxLng + lngPadding),
+    );
+
+    _navigationController.updateMapBounds(bounds);
   }
 
   // Helper method to set station as destination for navigation
@@ -109,7 +135,7 @@ class StationScreenState extends State<StationScreen> {
 
   Widget _buildStationScreen() {
     return BlocProvider(
-      create: (_) => StationBloc(StationRepository())..add(LoadStations(selectedStation: selectedStation)),
+      create: (_) => StationBloc(StationRepository())..add(LoadStations()),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
@@ -174,8 +200,6 @@ class StationScreenState extends State<StationScreen> {
                   listener: (context, state) {
                     if (state is StationLoaded && state.selectedStation != null) {
                       showStationModal(context, state.selectedStation!);
-                      selectedStation=null;
-                     
                     }
                   },
                   builder: (context, state) {
@@ -518,13 +542,13 @@ class StationScreenState extends State<StationScreen> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
-                                // Navigator.pop(context);
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(
-                                //     builder: (context) =>  ScanScreen(station: station),
-                                //   ),
-                                // );
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>  ScanScreen(station: station),
+                                  ),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0A2342),
@@ -536,7 +560,7 @@ class StationScreenState extends State<StationScreen> {
                                 ),
                               ),
                               child: const Text(
-                                'Book',
+                                'Swap now',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

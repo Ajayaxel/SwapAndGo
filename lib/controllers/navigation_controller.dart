@@ -245,6 +245,13 @@ class NavigationController extends ChangeNotifier {
     return _mapService.createBounds(_currentPosition!, _destinationPosition!);
   }
 
+  /// Update map bounds for all stations
+  void updateMapBounds(LatLngBounds bounds) {
+    // This will be used by the map widget to update camera position
+    // The actual implementation will be handled by the map widget
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _locationSubscription?.cancel();

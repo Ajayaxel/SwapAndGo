@@ -7,6 +7,7 @@ import 'package:swap_app/model/station_model.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/station/station_state.dart';
+import 'package:swap_app/presentation/station/scan_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../const/go_button.dart';
@@ -71,38 +72,17 @@ class _HomeContentModularState extends State<HomePage> {
         _navigationController.startNavigation();
       },
       onBook: () {
-        Navigator.pop(context);
-        _bookStation(station);
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) =>  ScanScreen(station: station)),
+        );
+
       },
     );
   }
 
-  Future<void> _bookStation(Station station) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Booking ${station.name}...'),
-        backgroundColor: Colors.blue,
-        duration: const Duration(seconds: 2),
-      ),
-    );
 
-    // Simulate booking success
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully booked ${station.name}!'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
 
   void _updateMapMarkers(List<Station> stations) {
-    if (_navigationController.currentPosition == null) return;
-
     final stationMarkers = _realStationService.createStationMarkers(
       stations,
       _onStationTap,
@@ -417,6 +397,10 @@ class _HomeContentModularState extends State<HomePage> {
               onPlaceSelected: _onPlaceSelected,
               controller: _searchController,
             ),
+
+
+         
+
 
             // Swap Now button
             Positioned(

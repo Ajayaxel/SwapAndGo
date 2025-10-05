@@ -106,7 +106,7 @@ class StationBottomSheet extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'Book',
+                    'Swap now',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

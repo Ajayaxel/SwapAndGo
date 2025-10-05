@@ -25,10 +25,12 @@ class MapService {
       'asset/home/User icon 2 (1).png',
       size: 120,
     );
+    
     _destinationIcon = await _getCustomMarker(
       'asset/home/Battery station icon (1).png',
       size: 120,
     );
+    
     _stationIcon = await _getCustomMarker(
       'asset/home/Battery station icon (1).png',
       size: 100,

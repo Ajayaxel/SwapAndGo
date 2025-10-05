@@ -96,7 +96,7 @@ class BookNowScreen extends StatelessWidget {
                 context.read<QrcodeBloc>().add(QrCodeCheckoutRequested(qrCode: scannedData?.batteryCode?? ''));
                 Navigator.push(context, MaterialPageRoute(builder: (context) => ScanSuccessScreen(scannedData: scannedData,station: station)));
               },
-              text: "Book now",
+              text: "Swap now",
               backgroundColor: Color(0xff0A2342),
               textColor: Colors.white,
               foregroundColor: Colors.white,
