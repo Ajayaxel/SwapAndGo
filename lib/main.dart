@@ -5,6 +5,7 @@ import 'package:swap_app/bloc/auth_bloc.dart';
 
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
+import 'package:swap_app/bloc/qrcode/qrcode_bloc.dart';
 import 'package:swap_app/presentation/widget/app_wrapper.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import 'package:swap_app/services/storage_helper.dart';
@@ -27,7 +28,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           create: (context) => StationBloc(StationRepository())..add(LoadStations()),
         ),
-
+        BlocProvider(
+          create: (context) => QrcodeBloc(),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

@@ -1,4 +1,6 @@
 // bloc/station_event.dart
+import 'package:swap_app/model/station_model.dart';
+
 abstract class StationEvent {}
 
 class LoadStations extends StationEvent {
@@ -8,6 +10,7 @@ class LoadStations extends StationEvent {
   final String? is24x7;
   final String? isActive;
   final int perPage;
+  final Station? selectedStation;
 
   LoadStations({
     this.search,
@@ -16,6 +19,7 @@ class LoadStations extends StationEvent {
     this.is24x7,
     this.isActive,
     this.perPage = 15,
+    this.selectedStation,
   });
 }
 
@@ -41,4 +45,10 @@ class RefreshStations extends StationEvent {
     this.isActive,
     this.perPage = 15,
   });
+}
+
+class SelectStation extends StationEvent {
+  final Station station;
+
+  SelectStation(this.station,);
 }

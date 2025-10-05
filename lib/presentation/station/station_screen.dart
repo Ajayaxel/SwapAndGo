@@ -4,6 +4,7 @@ import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/station/station_state.dart';
 import 'package:swap_app/presentation/station/scan_screen.dart';
+import 'package:swap_app/presentation/station/scan_suceess_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import '../../controllers/navigation_controller.dart';
 import '../../widgets/reusable_map_widget.dart';
@@ -11,17 +12,23 @@ import '../../services/real_station_service.dart';
 import '../../model/station_model.dart';
 
 
+  final GlobalKey<StationScreenState> stationScreenKey =
+      GlobalKey<StationScreenState>();
+
+
 class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
+   
 
   @override
-  State<StationScreen> createState() => _StationScreenState();
+  State<StationScreen> createState() => StationScreenState();
 }
 
-class _StationScreenState extends State<StationScreen> {
+class StationScreenState extends State<StationScreen> {
   late NavigationController _navigationController;
   final RealStationService _realStationService = RealStationService();
   bool _isFullscreenNavigation = false;
+
 
   @override
   void initState() {
@@ -46,11 +53,11 @@ class _StationScreenState extends State<StationScreen> {
     _navigationController.setDestination(station.position);
     
     // Show bottom sheet with real station data
-    _showStationModal(context, station);
+    // showStationModal(context, station);
   }
 
   void _updateMapMarkers(List<Station> stations) {
-    if (_navigationController.currentPosition == null) return;
+    if (_navigationController.currentPosition != null) return;
 
     final stationMarkers = _realStationService.createStationMarkers(
       stations,
@@ -64,6 +71,7 @@ class _StationScreenState extends State<StationScreen> {
   void _setStationAsDestination(Station station) {
     _navigationController.setDestination(station.position);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +109,7 @@ class _StationScreenState extends State<StationScreen> {
 
   Widget _buildStationScreen() {
     return BlocProvider(
-      create: (_) => StationBloc(StationRepository())..add(LoadStations()),
+      create: (_) => StationBloc(StationRepository())..add(LoadStations(selectedStation: selectedStation)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
@@ -162,7 +170,14 @@ class _StationScreenState extends State<StationScreen> {
                   color: Color(0xffF3F3F3),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                child: BlocBuilder<StationBloc, StationState>(
+                child: BlocConsumer<StationBloc, StationState>(
+                  listener: (context, state) {
+                    if (state is StationLoaded && state.selectedStation != null) {
+                      showStationModal(context, state.selectedStation!);
+                      selectedStation=null;
+                     
+                    }
+                  },
                   builder: (context, state) {
                     if (state is StationLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -196,7 +211,7 @@ class _StationScreenState extends State<StationScreen> {
                             padding: const EdgeInsets.only(top: 16),
                             child: GestureDetector(
                               onTap: () {
-                                _showStationModal(context, station);
+                                // showStationModal(context, station);
                               },
                               child: stationCard(
                                 context: context,
@@ -222,7 +237,7 @@ class _StationScreenState extends State<StationScreen> {
     );
   }
 
-  void _showStationModal(BuildContext context, Station station) {
+  void showStationModal(BuildContext context, Station station) {
     // Calculate distance and time
     double distance = 0.0;
     int estimatedMinutes = 0;
@@ -503,13 +518,13 @@ class _StationScreenState extends State<StationScreen> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ScanScreen(),
-                                  ),
-                                );
+                                // Navigator.pop(context);
+                                // Navigator.push(
+                                //   context,
+                                //   MaterialPageRoute(
+                                //     builder: (context) =>  ScanScreen(station: station),
+                                //   ),
+                                // );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0A2342),
@@ -618,7 +633,7 @@ class _StationScreenState extends State<StationScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ScanScreen()),
+                    MaterialPageRoute(builder: (context) =>  ScanScreen(station: station)),
                   );
                 },
                 style: OutlinedButton.styleFrom(

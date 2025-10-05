@@ -16,7 +16,7 @@ class _BottomNavState extends State<BottomNav> {
 
   final List<Widget> _screens = [
     const HomePage(),     // Make this full screen internally
-    const StationScreen(),   // Also full screen internally
+     StationScreen(key: stationScreenKey),   // Also full screen internally
     const WalletScreen(),
     const AccountScreen(),
   ];

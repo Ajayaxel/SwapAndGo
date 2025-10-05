@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/model/qr_scan_data.dart';
+import 'package:swap_app/model/station_model.dart';
+import 'package:swap_app/presentation/station/book_now_screen.dart';
 import 'package:swap_app/presentation/station/sacn_details_screen.dart';
 import 'package:swap_app/presentation/station/scan_suceess_screen.dart';
 
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  final Station station;
+  const ScanScreen({super.key, required this.station});
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -124,7 +126,7 @@ class _ScanScreenState extends State<ScanScreen>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ScanSuccessScreen(scannedData: _scannedData),
+            builder: (context) => BookNowScreen(scannedData: _scannedData, station: widget.station),
           ),
         );
       }
@@ -190,7 +192,7 @@ class _ScanScreenState extends State<ScanScreen>
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => ScanSuccessScreen(scannedData: _scannedData),
+        builder: (context) => ScanSuccessScreen(scannedData: _scannedData, station: widget.station),
       ),
     );
   }
@@ -369,18 +371,18 @@ class _ScanScreenState extends State<ScanScreen>
           const SizedBox(height: 16),
 
           // Start Swap Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: GoButton(
-              onPressed: _onStartSwapPressed,
-              text: 'START SWAP',
-              backgroundColor: _scanCompleted 
-                  ? const Color(0xff0A2342) 
-                  : Colors.grey,
-              textColor: Colors.white,
-              foregroundColor: Colors.white,
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          //   child: GoButton(
+          //     onPressed: _onStartSwapPressed,
+          //     text: 'START SWAP',
+          //     backgroundColor: _scanCompleted 
+          //         ? const Color(0xff0A2342) 
+          //         : Colors.grey,
+          //     textColor: Colors.white,
+          //     foregroundColor: Colors.white,
+          //   ),
+          // ),
 
           // Scan Details Button
           Padding(

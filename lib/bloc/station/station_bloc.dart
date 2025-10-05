@@ -9,6 +9,8 @@ class StationBloc extends Bloc<StationEvent, StationState> {
 
   StationBloc(this.repository) : super(StationInitial()) {
     on<LoadStations>((event, emit) async {
+      final selectedStation = event.selectedStation;
+     
       emit(StationLoading());
       try {
         final stations = await repository.fetchStations(
@@ -19,7 +21,7 @@ class StationBloc extends Bloc<StationEvent, StationState> {
           isActive: event.isActive,
           perPage: event.perPage,
         );
-        emit(StationLoaded(stations));
+        emit(StationLoaded(stations, selectedStation, ));
       } on StationApiException catch (e) {
         print('❌ Station API Error: ${e.message}');
         emit(StationError(e.message));
@@ -27,6 +29,12 @@ class StationBloc extends Bloc<StationEvent, StationState> {
         print('❌ Unexpected error in LoadStations: $e');
         emit(StationError('An unexpected error occurred: ${e.toString()}'));
       }
+    });
+
+    on<SelectStation>((event, emit) async {
+      if(state is StationLoaded) {
+        emit(StationLoaded((state as StationLoaded).stations, event.station));
+      } 
     });
 
     on<LoadStationById>((event, emit) async {
@@ -60,7 +68,7 @@ class StationBloc extends Bloc<StationEvent, StationState> {
           isActive: event.isActive,
           perPage: event.perPage,
         );
-        emit(StationLoaded(stations));
+        emit(StationLoaded(stations, null));
       } on StationApiException catch (e) {
         print('❌ Station API Error during refresh: ${e.message}');
         // Keep previous stations on error
