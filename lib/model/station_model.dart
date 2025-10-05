@@ -11,7 +11,7 @@ class OperatingHours {
   factory OperatingHours.fromJson(Map<String, dynamic> json) {
     final Map<String, DayHours> days = {};
     for (final entry in json.entries) {
-      days[entry.key] = DayHours.fromJson(entry.value);
+      days[entry.key] = DayHours.fromJson(entry.value as Map<String, dynamic>);
     }
     return OperatingHours(days: days);
   }
@@ -117,8 +117,30 @@ class Station {
     this.company,
   });
 
+  /// Helper method to parse operating hours from different formats
+  static OperatingHours? _parseOperatingHours(dynamic operatingHours) {
+    if (operatingHours == null) return null;
+    
+    // If it's a List (empty array), return null
+    if (operatingHours is List) {
+      if (operatingHours.isEmpty) return null;
+      // If it's a non-empty list, we might need to handle it differently
+      // For now, return null as the API seems to use empty arrays for 24/7 stations
+      return null;
+    }
+    
+    // If it's a Map, parse it normally
+    if (operatingHours is Map<String, dynamic>) {
+      return OperatingHours.fromJson(operatingHours);
+    }
+    
+    return null;
+  }
+
   factory Station.fromJson(Map<String, dynamic> json) {
-    return Station(
+    print('🔍 Debug: Station.fromJson called with: ${json.runtimeType}');
+    try {
+      return Station(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       code: json['code'] ?? '',
@@ -135,9 +157,7 @@ class Station {
       capacity: json['capacity'] ?? 0,
       availableSlots: json['available_slots'] ?? 0,
       is24x7: json['is_24_7'] ?? false,
-      operatingHours: json['operating_hours'] != null 
-          ? OperatingHours.fromJson(json['operating_hours']) 
-          : null,
+      operatingHours: _parseOperatingHours(json['operating_hours']),
       status: json['status'] ?? '',
       isActive: json['is_active'] ?? false,
       notes: json['notes'],
@@ -146,6 +166,11 @@ class Station {
       updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
       company: json['company'],
     );
+    } catch (e) {
+      print('❌ Error in Station.fromJson: $e');
+      print('❌ JSON data: $json');
+      rethrow;
+    }
   }
 
   /// Get position as LatLng for Google Maps
