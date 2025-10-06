@@ -184,6 +184,7 @@ class AccountScreen extends StatelessWidget {
               SizedBox(height: 50),
               GoButton(
                 onPressed: () {
+                  context.read<AuthBloc>().add(LogoutEvent());
                   // No functionality - just UI
                   print('Logout pressed');
                 },

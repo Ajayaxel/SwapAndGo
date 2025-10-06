@@ -11,12 +11,11 @@ import '../../widgets/reusable_map_widget.dart';
 import '../../services/real_station_service.dart';
 import '../../model/station_model.dart';
 
+final GlobalKey<StationScreenState> stationScreenKey =
+    GlobalKey<StationScreenState>();
 
-  final GlobalKey<StationScreenState> stationScreenKey =
-GlobalKey<StationScreenState>();
 class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
-   
 
   @override
   State<StationScreen> createState() => StationScreenState();
@@ -26,8 +25,6 @@ class StationScreenState extends State<StationScreen> {
   late NavigationController _navigationController;
   final RealStationService _realStationService = RealStationService();
   bool _isFullscreenNavigation = false;
-  LatLngBounds? _stationBounds;
-
 
   @override
   void initState() {
@@ -46,6 +43,7 @@ class StationScreenState extends State<StationScreen> {
     await _navigationController.initialize();
     // Stations will be loaded when the bloc loads them
   }
+
   /// near by station tap on google map function
   void _onMapStationTap(Station station) {
     // Show station modal when tapped
@@ -59,7 +57,7 @@ class StationScreenState extends State<StationScreen> {
     );
 
     _navigationController.addStationMarkers(stationMarkers);
-    
+
     // Update map bounds to show all stations
     if (stations.isNotEmpty) {
       _updateMapBounds(stations);
@@ -75,10 +73,18 @@ class StationScreenState extends State<StationScreen> {
     double maxLng = stations.first.position.longitude;
 
     for (final station in stations) {
-      minLat = minLat < station.position.latitude ? minLat : station.position.latitude;
-      maxLat = maxLat > station.position.latitude ? maxLat : station.position.latitude;
-      minLng = minLng < station.position.longitude ? minLng : station.position.longitude;
-      maxLng = maxLng > station.position.longitude ? maxLng : station.position.longitude;
+      minLat = minLat < station.position.latitude
+          ? minLat
+          : station.position.latitude;
+      maxLat = maxLat > station.position.latitude
+          ? maxLat
+          : station.position.latitude;
+      minLng = minLng < station.position.longitude
+          ? minLng
+          : station.position.longitude;
+      maxLng = maxLng > station.position.longitude
+          ? maxLng
+          : station.position.longitude;
     }
 
     // Add padding to bounds
@@ -97,7 +103,6 @@ class StationScreenState extends State<StationScreen> {
   void _setStationAsDestination(Station station) {
     _navigationController.setDestination(station.position);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +169,10 @@ class StationScreenState extends State<StationScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.black.withValues(alpha: 0.2), Colors.transparent],
+                    colors: [
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.transparent,
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -173,16 +181,26 @@ class StationScreenState extends State<StationScreen> {
             ),
 
             // Title
-            const Positioned(
+            Positioned(
               top: 40,
               left: 16,
-              child: Text(
-                "Stations",
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+              child: BlocBuilder<StationBloc, StationState>(
+                builder: (context, state) {
+                  int stationCount = 0;
+                  if (state is StationLoaded) {
+                    stationCount = state.stations.length;
+                  }
+                  return Text(
+                    stationCount > 0
+                        ? "$stationCount Stations in this area"
+                        : "Stations",
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -198,7 +216,8 @@ class StationScreenState extends State<StationScreen> {
                 ),
                 child: BlocConsumer<StationBloc, StationState>(
                   listener: (context, state) {
-                    if (state is StationLoaded && state.selectedStation != null) {
+                    if (state is StationLoaded &&
+                        state.selectedStation != null) {
                       showStationModal(context, state.selectedStation!);
                     }
                   },
@@ -210,18 +229,18 @@ class StationScreenState extends State<StationScreen> {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         _updateMapMarkers(state.stations);
                       });
-                      
+
                       return ListView.builder(
                         controller: controller,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: state.stations.length,
                         itemBuilder: (context, index) {
                           final station = state.stations[index];
-                          
+
                           // Calculate distance from current position
                           double distance = 0.0;
                           String timeText = station.is24x7 ? "24x7" : "Limited";
-                          
+
                           if (_navigationController.currentPosition != null) {
                             distance = _realStationService.calculateDistance(
                               _navigationController.currentPosition!.latitude,
@@ -230,12 +249,12 @@ class StationScreenState extends State<StationScreen> {
                               station.position.longitude,
                             );
                           }
-                          
+
                           return Padding(
                             padding: const EdgeInsets.only(top: 16),
                             child: GestureDetector(
                               onTap: () {
-                                // showStationModal(context, station);
+                                showStationModal(context, station);
                               },
                               child: stationCard(
                                 context: context,
@@ -261,11 +280,12 @@ class StationScreenState extends State<StationScreen> {
     );
   }
 
+  // staion details bottom sheet
   void showStationModal(BuildContext context, Station station) {
     // Calculate distance and time
     double distance = 0.0;
     int estimatedMinutes = 0;
-    
+
     if (_navigationController.currentPosition != null) {
       distance = _realStationService.calculateDistance(
         _navigationController.currentPosition!.latitude,
@@ -282,7 +302,7 @@ class StationScreenState extends State<StationScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.5,
+        height: MediaQuery.of(context).size.height * 0.65,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -299,33 +319,8 @@ class StationScreenState extends State<StationScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
+            SizedBox(height: 16),
             // Header with close button
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Logo
-                  Image.asset(
-                    "asset/home/smallogo.png",
-                    height: 30,
-                    width: 75,
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.bookmark_border),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -376,201 +371,128 @@ class StationScreenState extends State<StationScreen> {
 
                     // Address
                     Text(
-                      '${station.address}, ${station.city}, ${station.state}',
+                      '${station.address}, ${station.city},\n${station.state}',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Info boxes
+                    // Station type and available slots
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Timings',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                station.is24x7 ? '24x7' : 'Limited',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          "Public Swap Station",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF0A2342),
                           ),
                         ),
-
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Station',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${station.availableSlots}/${station.capacity} available',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Type',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                station.type,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          "Available Slots: ${station.availableSlots}",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xffA5CE39),
                           ),
                         ),
                       ],
                     ),
-                    
-                    // Contact info if available
-                    if (station.contactNumber.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.phone, size: 16, color: Colors.blue),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Contact: ${station.contactNumber}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    
-                    const SizedBox(height: 20),
-                    const Divider(color: Color(0xffE6EAED), thickness: 2),
-
-                    const Spacer(),
-
-                    // Action buttons
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 32),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                // Set destination and show full-screen navigation
-                                _setStationAsDestination(station);
-                                setState(() {
-                                  _isFullscreenNavigation = true;
-                                });
-                                _navigationController.startNavigation();
-                              },
-                              style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                side: const BorderSide(color: Color(0xFF0A2342)),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                              child: const Text(
-                                'See Routes',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                              // Set destination and show full-screen navigation
+                              _setStationAsDestination(station);
+                              setState(() {
+                                _isFullscreenNavigation = true;
+                              });
+                              _navigationController.startNavigation();
+                            },
+                            child: Row(
+                              children: [
+                                const Icon(Icons.directions, size: 16),
+                                const SizedBox(width: 8),
+                                const Text('Directions'),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>  ScanScreen(station: station),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0A2342),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                              ),
-                              child: const Text(
-                                'Swap now',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        ),
+
+                        GestureDetector(
+                          onTap: () => _callCustomerCare(station.contactNumber),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.phone, size: 16),
+                                const SizedBox(width: 8),
+                                const Text('Customer Care'),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.grey[100],
+                          child: const Icon(Icons.share, size: 16),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// details
+                    Text(
+                      "Details",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF0A2342),
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "chargeing capacity",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${station.capacity} kWh",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+
+                    const SizedBox(height: 8),
+                    const Divider(color: Color(0xffE6EAED), thickness: 2),
+                    // working hours
+                    Text(
+                      "Working Hours",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xff0A2342)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${station.operatingHours?.toString()}",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+
                   ],
                 ),
               ),
@@ -587,6 +509,19 @@ class StationScreenState extends State<StationScreen> {
     required double distance,
     required String time,
   }) {
+    // Determine if station is available
+    final isAvailable = station.availableSlots > 0;
+    final statusColor = isAvailable ? Colors.green : Colors.red;
+    final statusText = isAvailable ? 'Available' : 'Occupied';
+
+    // Format distance (convert km to meters if less than 1km)
+    final distanceText = distance < 1.0
+        ? '${(distance * 1000).toInt()} m'
+        : '${distance.toStringAsFixed(1)} km';
+
+    // Format timing
+    final timingText = station.is24x7 ? '24x7' : 'Limited Hours';
+
     return Card(
       color: Colors.white,
       elevation: 2,
@@ -596,7 +531,7 @@ class StationScreenState extends State<StationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header with station name and distance
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -604,11 +539,11 @@ class StationScreenState extends State<StationScreen> {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.battery_charging_full,
+                        Icons.electric_bolt,
                         color: Colors.green,
                         size: 20,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           station.name,
@@ -622,61 +557,175 @@ class StationScreenState extends State<StationScreen> {
                     ],
                   ),
                 ),
+                Text(
+                  distanceText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Address and time away
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${station.address}, ${station.city}, ${station.state}, ${station.country}',
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${distance.toStringAsFixed(1)} km',
+                      '0 min away', // This could be calculated based on distance
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.black87,
                       ),
                     ),
-                    Text(time, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              '${station.address}, ${station.city}',
-              style: const TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
+            // Action buttons row
+            // directions and customer care
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                infoBox(label: 'Timings', value: time),
-                infoBox(label: 'Station', value: '${station.availableSlots}/${station.capacity}'),
-                infoBox(label: 'Type', value: station.type),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: GestureDetector(
+                    onTap: () {
+                      // Set destination and show full-screen navigation
+                      _setStationAsDestination(station);
+                      setState(() {
+                        _isFullscreenNavigation = true;
+                      });
+                      _navigationController.startNavigation();
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(Icons.directions, size: 16),
+                        const SizedBox(width: 8),
+                        const Text('Directions'),
+                      ],
+                    ),
+                  ),
+                ),
+
+                GestureDetector(
+                  onTap: () => _callCustomerCare(station.contactNumber),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.phone, size: 16),
+                        const SizedBox(width: 8),
+                        const Text('Customer Care'),
+                      ],
+                    ),
+                  ),
+                ),
+
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey[100],
+                  child: const Icon(Icons.share, size: 16),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
+            // Info boxes row
+            Row(
+              children: [
+                Expanded(
+                  child: infoBox(
+                    label: 'Timings',
+                    value: timingText,
+                    valueColor: station.is24x7 ? Colors.green : Colors.black87,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: infoBox(
+                    label: 'Station',
+                    value:
+                        '${station.availableSlots}/${station.capacity} available',
+                    valueColor: isAvailable ? Colors.green : Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: infoBox(
+                    label: 'Price',
+                    value: 'AED 1/min+Tax',
+                    valueColor: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Scan & Swap button
             SizedBox(
               width: double.infinity,
+
               child: OutlinedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) =>  ScanScreen(station: station)),
+                    MaterialPageRoute(
+                      builder: (context) => ScanScreen(station: station),
+                    ),
                   );
                 },
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  side: const BorderSide(color: Colors.black),
+                  side: const BorderSide(color: Color(0xFF0A2342)),
+                  padding: const EdgeInsets.symmetric(vertical: 11),
                 ),
                 child: const Text(
                   'Scan & Swap',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Color(0xFF0A2342),
                     fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -687,27 +736,63 @@ class StationScreenState extends State<StationScreen> {
     );
   }
 
-  Widget infoBox({required String label, required String value}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              color: label == 'Station' ? Colors.green : Colors.black,
-              fontWeight: FontWeight.w500,
+  Widget infoBox({
+    required String label,
+    required String value,
+    Color valueColor = Colors.black87,
+  }) {
+    return SizedBox(
+      width: 118,
+      height: 58,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 9, color: Colors.black54),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  // Method to call customer care
+  void _callCustomerCare(String contactNumber) {
+    // This would typically use url_launcher to make a phone call
+    // For now, we'll show a dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Customer Care'),
+          content: Text('Call $contactNumber'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

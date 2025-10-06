@@ -133,6 +133,12 @@ class _CountryCodePickerState extends State<CountryCodePicker> {
     );
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
@@ -176,23 +182,6 @@ class _CountryCodePickerState extends State<CountryCodePicker> {
                 ],
               ),
             ),
-            // Search field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search countries...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onChanged: (value) {
-                  // Implement search functionality if needed
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
             // Countries list
             Expanded(
               child: ListView.builder(
