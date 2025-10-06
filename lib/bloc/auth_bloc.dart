@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:swap_app/services/storage_helper.dart';
+import 'package:swap_app/model/auth_models.dart';
 
 // 🔹 Events
 abstract class AuthEvent {}
@@ -38,6 +39,8 @@ class CheckAuthStatusEvent extends AuthEvent {}
 
 class LogoutEvent extends AuthEvent {}
 
+// Removed API events - keeping only UI functionality
+
 // 🔹 States
 abstract class AuthState {}
 
@@ -52,6 +55,12 @@ class AuthSuccess extends AuthState {
   AuthSuccess({required this.customer, required this.token});
 }
 
+class RegistrationSuccess extends AuthState {
+  final String message;
+
+  RegistrationSuccess({required this.message});
+}
+
 class AuthError extends AuthState {
   final String message;
   final Map<String, List<String>>? fieldErrors;
@@ -61,50 +70,9 @@ class AuthError extends AuthState {
 
 class AuthUnauthenticated extends AuthState {}
 
-// 🔹 Model
-class Customer {
-  final int id;
-  final String name;
-  final String email;
-  final String phone;
-  final String? companyName;
-  final bool status;
-  final String createdAt;
+// Removed profile-related states - keeping only UI functionality
 
-  Customer({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    this.companyName,
-    required this.status,
-    required this.createdAt,
-  });
-
-  factory Customer.fromJson(Map<String, dynamic> json) {
-    return Customer(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      phone: json['phone'],
-      companyName: json['company_name'],
-      status: json['status'],
-      createdAt: json['created_at'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'company_name': companyName,
-      'status': status,
-      'created_at': createdAt,
-    };
-  }
-}
+// 🔹 Model (moved to auth_models.dart)
 
 // 🔹 BLoC
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -115,6 +83,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterEvent>(_onRegister);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<LogoutEvent>(_onLogout);
+    // Removed profile-related event handlers - keeping only UI functionality
   }
 
   // 🔹 Login
@@ -122,39 +91,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
+      final loginRequest = LoginRequest(
+        email: event.email,
+        password: event.password,
+      );
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/customer/login'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'email': event.email,
-          'password': event.password,
-        }),
+        body: jsonEncode(loginRequest.toJson()),
       );
 
-      final data = jsonDecode(response.body);
+      final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
 
-      if (response.statusCode == 200 && data['success'] == true) {
-        final customer = Customer.fromJson(data['data']['customer']);
-        final token = data['data']['token'];
-
-        await _storeAuthData(token, customer);
-
-        emit(AuthSuccess(customer: customer, token: token));
+      if (response.statusCode == 200 && authResponse.success) {
+        await _storeAuthData(authResponse.token!, authResponse.customer!);
+        emit(AuthSuccess(customer: authResponse.customer!, token: authResponse.token!));
       } else {
-        if (data['errors'] != null) {
-          final errors = Map<String, List<String>>.from(
-            data['errors'].map((key, value) =>
-                MapEntry(key, List<String>.from(value))),
-          );
-          emit(AuthError(
-              message: data['message'] ?? 'Login failed',
-              fieldErrors: errors));
-        } else {
-          emit(AuthError(message: data['message'] ?? 'Login failed'));
-        }
+        emit(AuthError(
+          message: authResponse.message,
+          fieldErrors: authResponse.errors,
+        ));
       }
     } catch (e) {
       emit(AuthError(message: 'Network error. Please check your connection.'));
@@ -166,44 +126,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
+      final signupRequest = SignupRequest(
+        name: event.name,
+        email: event.email,
+        phone: event.phone,
+        password: event.password,
+        passwordConfirmation: event.passwordConfirmation,
+        companyName: event.companyName,
+        notes: event.notes,
+      );
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/customer/register'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'name': event.name,
-          'email': event.email,
-          'phone': event.phone,
-          'password': event.password,
-          'password_confirmation': event.passwordConfirmation,
-          'company_name': event.companyName,
-          'notes': event.notes,
-        }),
+        body: jsonEncode(signupRequest.toJson()),
       );
 
-      final data = jsonDecode(response.body);
+      final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
 
-      if (response.statusCode == 200 && data['success'] == true) {
-        final customer = Customer.fromJson(data['data']['customer']);
-        final token = data['data']['token'];
-
-        await _storeAuthData(token, customer);
-
-        emit(AuthSuccess(customer: customer, token: token));
+      if (response.statusCode == 201 && authResponse.success) {
+        // For registration, we don't automatically log the user in
+        // They need to login separately
+        emit(RegistrationSuccess(message: authResponse.message));
       } else {
-        if (data['errors'] != null) {
-          final errors = Map<String, List<String>>.from(
-            data['errors'].map((key, value) =>
-                MapEntry(key, List<String>.from(value))),
-          );
-          emit(AuthError(
-              message: data['message'] ?? 'Registration failed',
-              fieldErrors: errors));
-        } else {
-          emit(AuthError(message: data['message'] ?? 'Registration failed'));
-        }
+        emit(AuthError(
+          message: authResponse.message,
+          fieldErrors: authResponse.errors,
+        ));
       }
     } catch (e) {
       emit(AuthError(message: 'Network error. Please check your connection.'));
@@ -269,4 +221,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return false;
     }
   }
+
+  // Removed profile-related API methods - keeping only UI functionality
 }

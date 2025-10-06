@@ -6,17 +6,27 @@ import 'package:swap_app/presentation/account/profile_edit.dart';
 class MyProfilePage extends StatelessWidget {
   const MyProfilePage({super.key});
 
+  void _showImagePicker(BuildContext context) {
+    // No functionality - just UI
+    print('Image picker pressed');
+  }
+
+  void _deleteProfileImage(BuildContext context) {
+    // No functionality - just UI
+    print('Delete profile image pressed');
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-
-            children: [
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   GestureDetector(
@@ -33,6 +43,61 @@ class MyProfilePage extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 30),
+              
+              // Profile Image Section
+              Center(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showImagePicker(context),
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            child: Icon(Icons.person, size: 50, color: Colors.grey),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.camera_alt,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Tap to change profile picture",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _deleteProfileImage(context),
+                      child: Text(
+                        "Delete Profile Image",
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 30),
+              
               // Contact Information
               const Text(
                 "Contact information",
@@ -59,34 +124,34 @@ class MyProfilePage extends StatelessWidget {
 
                 child: Column(
                   children: [
-                    BlocBuilder<AuthBloc, AuthState>(
-                      builder: (context, state) {
-                        if (state is AuthSuccess) {
-                          return Row(
-                            children: [
-                              const Icon(Icons.email_outlined, size: 22),
-                              const SizedBox(width: 10),
-                              Text(
-                                state.customer.email, // email from state
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                            ],
-                          );
-                        } else if (state is AuthError) {
-                          return const Text("Not logged in");
-                        }
-
-                        // ✅ Always return something
-                        return const SizedBox.shrink();
-                      },
+                    Row(
+                      children: [
+                        const Icon(Icons.email_outlined, size: 22),
+                        const SizedBox(width: 10),
+                        BlocBuilder<AuthBloc, AuthState>(
+                          builder: (context, state) {
+                            if (state is AuthSuccess) {
+                              return Text(state.customer.email);
+                            }
+                            return SizedBox();
+                          },
+                        ),
+                      ],
                     ),
 
                     const Divider(height: 25),
                     Row(
-                      children: const [
-                        Icon(Icons.phone_outlined, size: 22),
-                        SizedBox(width: 10),
-                        Text("1234567890", style: TextStyle(fontSize: 15)),
+                      children: [
+                        const Icon(Icons.phone_outlined, size: 22),
+                        const SizedBox(width: 10),
+                        BlocBuilder<AuthBloc, AuthState>(
+                          builder: (context, state) {
+                            if (state is AuthSuccess) {
+                              return Text(state.customer.phone);
+                            }
+                            return SizedBox();
+                          },
+                        ),
                       ],
                     ),
                   ],
@@ -197,3 +262,4 @@ class MyProfilePage extends StatelessWidget {
     );
   }
 }
+

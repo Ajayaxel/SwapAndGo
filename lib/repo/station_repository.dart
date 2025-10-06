@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:swap_app/model/station_model.dart';
 import 'package:swap_app/services/storage_helper.dart';
+import 'package:swap_app/services/global_auth_service.dart';
 
 class StationRepository {
   final String baseUrl = "https://onecharge.io/api/stations";

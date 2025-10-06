@@ -9,6 +9,14 @@ import 'package:swap_app/presentation/account/transaction_history.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
+
+  void _showImagePicker(BuildContext context) {
+    // No functionality - just UI
+    print('Image picker pressed');
+  }
+
+  // Removed _pickImage method - no functionality needed
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,35 +54,71 @@ class AccountScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      return Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: NetworkImage(
-                              "https://media.istockphoto.com/id/1682296067/photo/happy-studio-portrait-or-professional-man-real-estate-agent-or-asian-businessman-smile-for.jpg?s=612x612&w=0&k=20&c=9zbG2-9fl741fbTWw5fNgcEEe4ll-JegrGlQQ6m54rg=",
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showImagePicker(context),
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 25,
+                              child: Icon(
+                                Icons.person,
+                                size: 30,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 16),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.camera_alt,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 16),
 
-                          if (state is AuthSuccess)
-                            Text(
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          if (state is AuthSuccess) {
+                            return Text(
                               state.customer.name,
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w600,
                               ),
-                            ),
+                            );
+                          }else if (state is AuthError) {
+                            return Text(
+                              state.message,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }
+                          return SizedBox();
+                        },
+                      ),
 
-                          Spacer(),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.black,
-                            size: 20,
-                          ),
-                        ],
-                      );
-                    },
+                      Spacer(),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -140,7 +184,8 @@ class AccountScreen extends StatelessWidget {
               SizedBox(height: 50),
               GoButton(
                 onPressed: () {
-                  context.read<AuthBloc>().add(LogoutEvent());
+                  // No functionality - just UI
+                  print('Logout pressed');
                 },
                 text: "Logout",
                 backgroundColor: Colors.black,

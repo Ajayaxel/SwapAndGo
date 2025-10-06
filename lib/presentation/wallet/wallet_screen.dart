@@ -6,6 +6,7 @@ import 'package:swap_app/bloc/wallet/wallet_state.dart';
 import 'package:swap_app/const/conts_colors.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/wallet/payment_screen.dart';
+import 'package:swap_app/services/auth_handler.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
@@ -23,281 +24,289 @@ class WalletScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => WalletBloc()..add(const FetchWalletBalanceEvent()),
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: const Color(0xFFF5F5F5),
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  "Payments",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+      child: BlocListener<WalletBloc, WalletState>(
+        listener: (context, state) {
+          if (state is WalletError) {
+            // Use the authentication handler to handle auth errors
+            AuthHandler.handleAuthError(context, state.statusCode, state.message);
+          }
+        },
+        child: SafeArea(
+          child: Scaffold(
+            backgroundColor: const Color(0xFFF5F5F5),
+            body: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      "Payments",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 35),
-              // Available Balance Card
-              BlocBuilder<WalletBloc, WalletState>(
-                builder: (context, state) {
-                  if (state is WalletLoading) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                  const SizedBox(height: 35),
+                  // Available Balance Card
+                  BlocBuilder<WalletBloc, WalletState>(
+                    builder: (context, state) {
+                      if (state is WalletLoading) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  } else if (state is WalletBalanceLoaded) {
-                    final balance = state.balanceResponse.data;
-                    final balanceAmount = double.parse(balance.balance);
-                    final currency = balance.currency;
-                    
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Available balance',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        );
+                      } else if (state is WalletBalanceLoaded) {
+                        final balance = state.balanceResponse.data;
+                        final balanceAmount = double.parse(balance.balance);
+                        final currency = balance.currency;
+                        
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 5),
-                          Text(
-                            '$currency ${balance.balance}',
-                            style: const TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          // Balance Progress Bar
-                          Column(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Colors.grey.shade200,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: (balanceAmount * 2).round(), // Dynamic flex based on balance
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(4),
-                                          color: const Color(0xFF00C851), // Green color
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: (100 - (balanceAmount * 2)).round().clamp(0, 100), // Remaining portion
-                                      child: const SizedBox(),
-                                    ),
-                                  ],
+                              const Text(
+                                'Available balance',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              const SizedBox(height: 5),
+                              Text(
+                                '$currency ${balance.balance}',
+                                style: const TextStyle(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              // Balance Progress Bar
+                              Column(
                                 children: [
-                                  Text(
-                                    '$currency 0',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
+                                  Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: Colors.grey.shade200,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          flex: (balanceAmount * 2).round(), // Dynamic flex based on balance
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(4),
+                                              color: const Color(0xFF00C851), // Green color
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: (100 - (balanceAmount * 2)).round().clamp(0, 100), // Remaining portion
+                                          child: const SizedBox(),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    '$currency 50',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '$currency 0',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      Text(
+                                        '$currency 50',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    );
-                  } else if (state is WalletError) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: Colors.red,
-                            size: 48,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error loading balance',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            state.message,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<WalletBloc>().add(const FetchWalletBalanceEvent());
-                            },
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    );
-                  } else {
-                    // Default state - show loading
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // Warning Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
+                        );
+                      } else if (state is WalletError) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24.0),
                           decoration: BoxDecoration(
-                            color: AppColors.goBlue,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.memory,
                             color: Colors.white,
-                            size: 20,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            textAlign: TextAlign.start,
-                            'For uninterrupted swapping battery, clear your dues before you run out of balance',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xff212121),
-                              height: 1.4,
-                            ),
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error loading balance',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                state.message,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  context.read<WalletBloc>().add(const FetchWalletBalanceEvent());
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
                           ),
+                        );
+                      } else {
+                        // Default state - show loading
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Warning Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    GoButton(
-                      onPressed: () {
-                        _showbottmSheet(context);
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.goBlue,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.memory,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Text(
+                                textAlign: TextAlign.start,
+                                'For uninterrupted swapping battery, clear your dues before you run out of balance',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xff212121),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        GoButton(
+                          onPressed: () {
+                            _showbottmSheet(context);
 
-                        // Handle payment action
-                      },
-                      text: 'Add cash on wallet',
-                      backgroundColor: AppColors.goBlue,
-                      textColor: Colors.white,
-                      foregroundColor: Colors.white,
+                            // Handle payment action
+                          },
+                          text: 'Add cash on wallet',
+                          backgroundColor: AppColors.goBlue,
+                          textColor: Colors.white,
+                          foregroundColor: Colors.white,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Pay Button
+                ],
               ),
-
-              const SizedBox(height: 24),
-
-              // Pay Button
-              ],
             ),
           ),
         ),
@@ -314,8 +323,6 @@ class PaymentBottomSheet extends StatefulWidget {
 }
 
 class _PaymentBottomSheetState extends State<PaymentBottomSheet> {
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -360,10 +367,6 @@ class _PaymentBottomSheetState extends State<PaymentBottomSheet> {
               style: TextStyle(fontSize: 14, color: Color(0xff0E0E0E)),
               textAlign: TextAlign.center,
             ),
-
-
-
-
 
             const SizedBox(height: 24),
 

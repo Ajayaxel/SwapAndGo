@@ -4,7 +4,11 @@
 <dict>
     <!-- Camera usage -->
     <key>NSCameraUsageDescription</key>
-    <string>We need camera access to scan QR codes</string>
+    <string>We need camera access to scan QR codes and take profile pictures</string>
+    
+    <!-- Photo Library usage -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library to select profile pictures</string>
 
     <!-- Location usage for Google Maps -->
     <key>NSLocationWhenInUseUsageDescription</key>

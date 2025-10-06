@@ -7,6 +7,7 @@ import 'package:swap_app/bloc/wallet/wallet_state.dart';
 import 'package:swap_app/controllers/navigation_controller.dart';
 import 'package:swap_app/model/wallet_model.dart';
 import 'package:swap_app/services/storage_helper.dart';
+import 'package:swap_app/services/auth_handler.dart';
 
 class WalletBloc extends Bloc<WalletEvent, WalletState> {
   static const String baseUrl = 'https://onecharge.io';
@@ -48,7 +49,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
       final data = jsonDecode(response.body);
 
-      if (data['success'] == true) {
+      if (response.statusCode == 200 && data['success'] == true) {
         final depositResponse = WalletDepositResponse.fromJson(data);
         print(
           '✅ Deposit API Success - iframe URL: ${depositResponse.data.iframeUrl}',

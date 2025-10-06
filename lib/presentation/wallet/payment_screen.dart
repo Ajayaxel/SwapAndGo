@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:swap_app/bloc/auth_bloc.dart' show LogoutEvent, AuthBloc;
 import 'package:swap_app/bloc/wallet/wallet_bloc.dart';
 import 'package:swap_app/bloc/wallet/wallet_event.dart';
 import 'package:swap_app/bloc/wallet/wallet_state.dart';
@@ -8,8 +7,8 @@ import 'package:swap_app/const/conts_colors.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/account/my_profile.dart';
 import 'package:swap_app/presentation/bootmnav/bottm_nav.dart';
-import 'package:swap_app/presentation/login/login_screen.dart';
 import 'package:swap_app/presentation/wallet/payment_webview_screen.dart';
+import 'package:swap_app/services/auth_handler.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -145,20 +144,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             );
           } else if (state is WalletError) {
-            // Show error message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-            if(state.statusCode == 401){
-                    context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false,
-              );
-            }
+            // Use the new authentication handler
+            AuthHandler.handleAuthError(context, state.statusCode, state.message);
           }
         },
         child: BlocBuilder<WalletBloc, WalletState>(
