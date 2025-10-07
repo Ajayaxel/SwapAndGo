@@ -2,7 +2,7 @@ name: swap_app
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.2.0+1
 
 environment:
   sdk: ^3.8.0
@@ -30,6 +30,8 @@ dependencies:
   webview_flutter: ^4.11.2 
   percent_indicator: ^4.2.3
   image_picker: ^1.0.7
+  rename: ^3.1.0
+  intl: ^0.19.0
 
   
 
