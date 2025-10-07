@@ -1,25 +1,140 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:swap_app/bloc/auth_bloc.dart';
+import 'package:swap_app/bloc/profile_image/profile_image_bloc.dart';
+import 'package:swap_app/bloc/profile_image/profile_image_event.dart';
+import 'package:swap_app/bloc/profile_image/profile_image_state.dart';
 import 'package:swap_app/presentation/account/profile_edit.dart';
 
-class MyProfilePage extends StatelessWidget {
+class MyProfilePage extends StatefulWidget {
   const MyProfilePage({super.key});
 
+  @override
+  State<MyProfilePage> createState() => _MyProfilePageState();
+}
+
+class _MyProfilePageState extends State<MyProfilePage> {
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch profile data when screen loads
+    context.read<ProfileImageBloc>().add(FetchProfileEvent());
+  }
+
   void _showImagePicker(BuildContext context) {
-    // No functionality - just UI
-    print('Image picker pressed');
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Gallery'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_camera),
+                title: Text('Camera'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        final File imageFile = File(image.path);
+        context.read<ProfileImageBloc>().add(
+          UploadProfileImageEvent(imageFile: imageFile),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
   }
 
   void _deleteProfileImage(BuildContext context) {
-    // No functionality - just UI
-    print('Delete profile image pressed');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Profile Image'),
+          content: Text('Are you sure you want to delete your profile image?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<ProfileImageBloc>().add(DeleteProfileImageEvent());
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<ProfileImageBloc, ProfileImageState>(
+      listener: (context, state) {
+        if (state is ProfileImageUploadSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh profile data after successful upload
+          context.read<ProfileImageBloc>().add(FetchProfileEvent());
+        } else if (state is ProfileImageDeleteSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh profile data after successful deletion
+          context.read<ProfileImageBloc>().add(FetchProfileEvent());
+        } else if (state is ProfileImageError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
           child: Padding(
@@ -27,75 +142,106 @@ class MyProfilePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: Icon(Icons.arrow_back, color: Colors.black),
-                  ),
-                  SizedBox(width: 16),
-                  Text(
-                    "My Profile",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-              SizedBox(height: 30),
-              
-              // Profile Image Section
-              Center(
-                child: Column(
+                Row(
                   children: [
                     GestureDetector(
-                      onTap: () => _showImagePicker(context),
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            child: Icon(Icons.person, size: 50, color: Colors.grey),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                              ),
-                              padding: EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.camera_alt,
-                                size: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                      child: Icon(Icons.arrow_back, color: Colors.black),
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(width: 16),
                     Text(
-                      "Tap to change profile picture",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => _deleteProfileImage(context),
-                      child: Text(
-                        "Delete Profile Image",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                        ),
-                      ),
+                      "My Profile",
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
-              ),
+                SizedBox(height: 30),
+                
+                // Profile Image Section
+                Center(
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showImagePicker(context),
+                        child: BlocBuilder<ProfileImageBloc, ProfileImageState>(
+                          builder: (context, state) {
+                            String? profileImageUrl;
+                            
+                            if (state is ProfileImageFetchSuccess) {
+                              profileImageUrl = state.customer.profileImageUrl;
+                            } else if (state is ProfileImageUploadSuccess) {
+                              profileImageUrl = state.imageUrl;
+                            }
+                            
+                            return Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 50,
+                                  backgroundImage: profileImageUrl != null
+                                      ? NetworkImage(profileImageUrl)
+                                      : null,
+                                  child: profileImageUrl == null
+                                      ? Icon(Icons.person, size: 50, color: Colors.grey)
+                                      : null,
+                                ),
+                                if (state is ProfileImageLoading)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.5),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: EdgeInsets.all(6),
+                                    child: Icon(
+                                      Icons.camera_alt,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        "Tap to change profile picture",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _deleteProfileImage(context),
+                        child: Text(
+                          "Delete Profile Image",
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               SizedBox(height: 30),
               
               // Contact Information
@@ -259,7 +405,7 @@ class MyProfilePage extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 

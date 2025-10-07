@@ -47,7 +47,8 @@ class StationScreenState extends State<StationScreen> {
   /// near by station tap on google map function
   void _onMapStationTap(Station station) {
     // Show station modal when tapped
-    showStationModal(context, station);
+        showStationModal(context, station);
+    
   }
 
   void _updateMapMarkers(List<Station> stations) {
