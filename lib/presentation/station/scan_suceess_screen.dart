@@ -242,19 +242,19 @@ class ScanSuccessScreen extends StatelessWidget {
       return Column(
         children: [
           // CHECKOUT button
-          GoButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const CheckoutScreen()),
-                (route) => false, // Remove all previous routes
-              );
-            },
-            text: 'CHECKOUT',
-            backgroundColor: const Color(0xff0A2342),
-            textColor: Colors.white,
-            foregroundColor: Colors.white,
-          ),
+          // GoButton(
+          //   onPressed: () {
+          //     Navigator.pushAndRemoveUntil(
+          //       context,
+          //       MaterialPageRoute(builder: (context) => const CheckoutScreen()),
+          //       (route) => false, // Remove all previous routes
+          //     );
+          //   },
+          //   text: 'CHECKOUT',
+          //   backgroundColor: const Color(0xff0A2342),
+          //   textColor: Colors.white,
+          //   foregroundColor: Colors.white,
+          // ),
           const SizedBox(height: 12),
           // Done button
           GoButton(

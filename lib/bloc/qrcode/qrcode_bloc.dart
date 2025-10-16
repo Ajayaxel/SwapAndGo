@@ -50,7 +50,7 @@ class QrcodeBloc extends Bloc<QrcodeEvent, QrcodeState> {
       } else {
         emit(QrcodeError(
           qrCode: event.qrCode,
-          error: response.error ?? 'Checkout failed',
+          error: response.message ?? response.error ?? 'Checkout failed',
         ));
       }
     } catch (e) {

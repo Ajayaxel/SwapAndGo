@@ -40,10 +40,21 @@ class QrCodeService {
         final responseData = json.decode(response.body);
         return QrCodeCheckoutResponse.fromJson(responseData);
       } else {
-        return QrCodeCheckoutResponse(
-          success: false,
-          error: 'HTTP ${response.statusCode}: ${response.reasonPhrase}',
-        );
+        // Handle error responses (400, 401, 500, etc.)
+        try {
+          final errorData = json.decode(response.body);
+          return QrCodeCheckoutResponse(
+            success: false,
+            message: errorData['message'] ?? 'An error occurred',
+            error: 'HTTP ${response.statusCode}: ${response.reasonPhrase}',
+          );
+        } catch (e) {
+          // If response body is not valid JSON
+          return QrCodeCheckoutResponse(
+            success: false,
+            error: 'HTTP ${response.statusCode}: ${response.reasonPhrase}',
+          );
+        }
       }
     } catch (e) {
       return QrCodeCheckoutResponse(

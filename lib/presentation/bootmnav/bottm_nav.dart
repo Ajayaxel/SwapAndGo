@@ -13,11 +13,62 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
+
+void _showBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'This feature will be available soon.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK',style: TextStyle(color: Colors.white),),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomePage(),     // Make this full screen internally
-     StationScreen(key: stationScreenKey),   // Also full screen internally
+    const HomePage(), // Make this full screen internally
+    StationScreen(key: stationScreenKey), // Also full screen internally
     const WalletScreen(),
     const AccountScreen(),
   ];
@@ -34,6 +85,22 @@ class _BottomNavState extends State<BottomNav> {
       child: Scaffold(
         backgroundColor: const Color(0xfff4f4f4),
         body: _screens[_selectedIndex],
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            _showBottomSheet(context);
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          backgroundColor: Color(0xff0A2342),
+          elevation: 4,
+          child: const Icon(
+            Icons.qr_code_scanner,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRRect(
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(18),
