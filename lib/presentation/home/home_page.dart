@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
 import 'package:swap_app/model/station_model.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
@@ -11,12 +8,11 @@ import 'package:swap_app/presentation/station/scan_screen.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../const/go_button.dart';
-import '../../const/google_api.dart';
 import '../../controllers/navigation_controller.dart';
 
 import '../../services/real_station_service.dart';
 import '../../widgets/reusable_map_widget.dart';
-import '../../widgets/search_widget.dart';
+import '../../widgets/station_search_widget.dart';
 import '../../widgets/station_bottom_sheet.dart';
 
 class HomePage extends StatefulWidget {
@@ -32,6 +28,7 @@ class _HomeContentModularState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
   
   bool _isFullscreenMap = false;
+  List<Station> _availableStations = [];
 
   @override
   void initState() {
@@ -91,31 +88,43 @@ class _HomeContentModularState extends State<HomePage> {
     _navigationController.addStationMarkers(stationMarkers);
   }
 
-  Future<void> _onPlaceSelected(String placeId, String description) async {
-    final url =
-        "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry,name&key=$googleApiKey";
+  void _onStationSelected(Station station) {
+    // Set the station position as destination
+    _navigationController.setDestination(station.position);
     
-    try {
-      final response = await http.get(Uri.parse(url));
-      final data = json.decode(response.body);
-
-      if (data['status'] == 'OK') {
-        final location = data['result']['geometry']['location'];
-        final destination = LatLng(location['lat'], location['lng']);
-        await _navigationController.setDestination(destination);
-      }
-    } catch (e) {
-      debugPrint('Place details error: $e');
-    }
+    // Convert to DestinationStation for the bottom sheet
+    final destinationStation = _realStationService.convertToDestinationStation(
+      station,
+      _navigationController.currentPosition,
+    );
+    
+    // Show bottom sheet with station details
+    StationBottomSheet.show(
+      context,
+      station: destinationStation,
+      currentPosition: _navigationController.currentPosition,
+      onSeeRoutes: () {
+        Navigator.pop(context);
+        _navigationController.startNavigation();
+      },
+      onBook: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => ScanScreen(station: station)),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => StationBloc(StationRepository())..add(LoadStations()),
+      create: (_) => StationBloc(StationRepository())..add(LoadStations(perPage: 100)),
       child: BlocListener<StationBloc, StationState>(
         listener: (context, state) {
           if (state is StationLoaded) {
+            setState(() {
+              _availableStations = state.stations;
+            });
             _updateMapMarkers(state.stations);
           }
         },
@@ -197,13 +206,15 @@ class _HomeContentModularState extends State<HomePage> {
           ),
 
           // Search bar
-          PositionedSearchWidget(
+          PositionedStationSearchWidget(
             top: 50,
             left: 16,
             right: 80, // Leave space for exit button
             hintText: 'Find swap stations',
-            onPlaceSelected: _onPlaceSelected,
+            onStationSelected: _onStationSelected,
             controller: _searchController,
+            stations: _availableStations,
+            currentPosition: _navigationController.currentPosition,
           ),
 
           // Start navigation button (if destination is selected)
@@ -389,13 +400,15 @@ class _HomeContentModularState extends State<HomePage> {
             ),
 
             // Search bar
-            PositionedSearchWidget(
+            PositionedStationSearchWidget(
               top: 16,
               left: 16,
               right: 16,
               hintText: 'Find swap stations',
-              onPlaceSelected: _onPlaceSelected,
+              onStationSelected: _onStationSelected,
               controller: _searchController,
+              stations: _availableStations,
+              currentPosition: _navigationController.currentPosition,
             ),
 
 

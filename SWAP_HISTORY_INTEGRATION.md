@@ -130,3 +130,6 @@ Each error shows a user-friendly message with a retry button.
 - [ ] Transaction card display
 - [ ] Date/time formatting
 
+
+
+
