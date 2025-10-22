@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/presentation/login/signup.dart';
+import 'package:swap_app/presentation/login/otp_verification_screen.dart';
+import 'package:swap_app/presentation/login/forgot_password_screen.dart';
 import 'package:swap_app/bloc/auth_bloc.dart';
 import 'package:swap_app/presentation/bootmnav/bottm_nav.dart';
 
@@ -58,6 +60,18 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const BottomNav()),
+          );
+        } else if (state is EmailNotVerified) {
+          _showMessage(state.message, isError: true);
+          // Navigate to OTP verification screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OtpVerificationScreen(
+                email: state.email,
+                message: 'Please verify your email to continue',
+              ),
+            ),
           );
         } else if (state is AuthError) {
           _showMessage(state.message, isError: true);
@@ -174,6 +188,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 30),
 
+                   
+
                         // Login Button
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
@@ -191,7 +207,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
                             child: const Text(
                               'Forget Password',
                               style: TextStyle(color: Colors.white),

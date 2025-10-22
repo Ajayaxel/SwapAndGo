@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/bloc/auth_bloc.dart';
-import 'package:swap_app/presentation/login/login_screen.dart';
+import 'package:swap_app/presentation/login/otp_verification_screen.dart';
 import 'package:swap_app/widgets/country_code_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -86,10 +86,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is RegistrationSuccess) {
-          _showMessage('Registration successful! Please login to continue');
+          _showMessage(state.message);
+          // Navigate to OTP verification screen
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            MaterialPageRoute(
+              builder: (context) => OtpVerificationScreen(
+                email: state.email,
+                message: state.message,
+              ),
+            ),
           );
         } else if (state is AuthError) {
           _showMessage(state.message, isError: true);

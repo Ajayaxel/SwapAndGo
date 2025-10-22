@@ -35,11 +35,28 @@ class RegisterEvent extends AuthEvent {
   });
 }
 
+class VerifyEmailEvent extends AuthEvent {
+  final String email;
+  final String otp;
+
+  VerifyEmailEvent({required this.email, required this.otp});
+}
+
+class ResendOtpEvent extends AuthEvent {
+  final String email;
+
+  ResendOtpEvent({required this.email});
+}
+
 class CheckAuthStatusEvent extends AuthEvent {}
 
 class LogoutEvent extends AuthEvent {}
 
-// Removed API events - keeping only UI functionality
+class UpdatePhoneEvent extends AuthEvent {
+  final String phone;
+
+  UpdatePhoneEvent({required this.phone});
+}
 
 // 🔹 States
 abstract class AuthState {}
@@ -57,8 +74,26 @@ class AuthSuccess extends AuthState {
 
 class RegistrationSuccess extends AuthState {
   final String message;
+  final String email;
+  final bool requiresVerification;
 
-  RegistrationSuccess({required this.message});
+  RegistrationSuccess({
+    required this.message,
+    required this.email,
+    this.requiresVerification = true,
+  });
+}
+
+class EmailVerificationSuccess extends AuthState {
+  final String message;
+
+  EmailVerificationSuccess({required this.message});
+}
+
+class ResendOtpSuccess extends AuthState {
+  final String message;
+
+  ResendOtpSuccess({required this.message});
 }
 
 class AuthError extends AuthState {
@@ -68,9 +103,21 @@ class AuthError extends AuthState {
   AuthError({required this.message, this.fieldErrors});
 }
 
+class EmailNotVerified extends AuthState {
+  final String message;
+  final String email;
+
+  EmailNotVerified({required this.message, required this.email});
+}
+
 class AuthUnauthenticated extends AuthState {}
 
-// Removed profile-related states - keeping only UI functionality
+class PhoneUpdateSuccess extends AuthState {
+  final String message;
+  final Customer customer;
+
+  PhoneUpdateSuccess({required this.message, required this.customer});
+}
 
 // 🔹 Model (moved to auth_models.dart)
 
@@ -81,9 +128,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
     on<LoginEvent>(_onLogin);
     on<RegisterEvent>(_onRegister);
+    on<VerifyEmailEvent>(_onVerifyEmail);
+    on<ResendOtpEvent>(_onResendOtp);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<LogoutEvent>(_onLogout);
-    // Removed profile-related event handlers - keeping only UI functionality
+    on<UpdatePhoneEvent>(_onUpdatePhone);
   }
 
   // 🔹 Login
@@ -111,10 +160,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         await _storeAuthData(authResponse.token!, authResponse.customer!);
         emit(AuthSuccess(customer: authResponse.customer!, token: authResponse.token!));
       } else {
-        emit(AuthError(
-          message: authResponse.message,
-          fieldErrors: authResponse.errors,
-        ));
+        // Check if email verification is required
+        if (authResponse.requiresVerification == true && authResponse.email != null) {
+          emit(EmailNotVerified(
+            message: authResponse.message,
+            email: authResponse.email!,
+          ));
+        } else {
+          emit(AuthError(
+            message: authResponse.message,
+            fieldErrors: authResponse.errors,
+          ));
+        }
       }
     } catch (e) {
       emit(AuthError(message: 'Network error. Please check your connection.'));
@@ -145,20 +202,166 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         body: jsonEncode(signupRequest.toJson()),
       );
 
-      final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
+      final registerResponse = RegisterResponse.fromJson(jsonDecode(response.body));
 
-      if (response.statusCode == 201 && authResponse.success) {
-        // For registration, we don't automatically log the user in
-        // They need to login separately
-        emit(RegistrationSuccess(message: authResponse.message));
+      if ((response.statusCode == 200 || response.statusCode == 201) && registerResponse.success) {
+        // Registration successful - navigate to OTP verification
+        emit(RegistrationSuccess(
+          message: registerResponse.message,
+          email: event.email,
+          requiresVerification: registerResponse.requiresVerification ?? true,
+        ));
       } else {
         emit(AuthError(
-          message: authResponse.message,
-          fieldErrors: authResponse.errors,
+          message: registerResponse.message,
+          fieldErrors: registerResponse.errors,
         ));
       }
     } catch (e) {
       emit(AuthError(message: 'Network error. Please check your connection.'));
+    }
+  }
+
+  // 🔹 Verify Email
+  Future<void> _onVerifyEmail(VerifyEmailEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+
+    try {
+      final verifyRequest = VerifyEmailRequest(
+        email: event.email,
+        otp: event.otp,
+      );
+
+      print('🔍 OTP Verification Request:');
+      print('Email: ${event.email}');
+      print('OTP: ${event.otp}');
+      print('Request Body: ${jsonEncode(verifyRequest.toJson())}');
+      print('API URL: $baseUrl/api/customer/verify-email');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/customer/verify-email'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(verifyRequest.toJson()),
+      );
+
+      print('🔍 OTP Verification Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+      print('🔍 Raw Response Data: $responseData');
+      
+      final verifyResponse = VerifyEmailResponse.fromJson(responseData);
+
+      print('🔍 Parsed Response:');
+      print('Success: ${verifyResponse.success}');
+      print('Message: ${verifyResponse.message}');
+      print('Customer: ${verifyResponse.customer?.name}');
+      print('Token: ${verifyResponse.token}');
+
+      if (response.statusCode == 200 && verifyResponse.success) {
+        // Email verification successful - navigate to login
+        print('✅ OTP Verification Successful');
+        emit(EmailVerificationSuccess(message: verifyResponse.message));
+      } else {
+        // Handle backend errors like "Customer not found"
+        print('❌ OTP Verification Failed: ${verifyResponse.message}');
+        emit(AuthError(
+          message: verifyResponse.message,
+          fieldErrors: verifyResponse.errors,
+        ));
+      }
+    } catch (e) {
+      print('❌ OTP Verification Error: $e');
+      print('Error Type: ${e.runtimeType}');
+      
+      String errorMessage = 'Network error. Please check your connection.';
+      
+      if (e.toString().contains('SocketException')) {
+        errorMessage = 'No internet connection. Please check your network.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.toString().contains('FormatException')) {
+        errorMessage = 'Invalid response format from server.';
+      } else if (e.toString().contains('HttpException')) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      print('Error Message: $errorMessage');
+      emit(AuthError(message: errorMessage));
+    }
+  }
+
+  // 🔹 Resend OTP
+  Future<void> _onResendOtp(ResendOtpEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+
+    try {
+      final resendRequest = ResendOtpRequest(
+        email: event.email,
+      );
+
+      print('🔍 Resend OTP Request:');
+      print('Email: ${event.email}');
+      print('Request Body: ${jsonEncode(resendRequest.toJson())}');
+      print('API URL: $baseUrl/api/customer/resend-otp');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/customer/resend-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(resendRequest.toJson()),
+      );
+
+      print('🔍 Resend OTP Response:');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+      print('🔍 Raw Response Data: $responseData');
+      
+      final resendResponse = ResendOtpResponse.fromJson(responseData);
+
+      print('🔍 Parsed Resend Response:');
+      print('Success: ${resendResponse.success}');
+      print('Message: ${resendResponse.message}');
+      print('OTP Expires In: ${resendResponse.otpExpiresInMinutes} minutes');
+
+      if (response.statusCode == 200 && resendResponse.success) {
+        // OTP resent successfully
+        print('✅ OTP Resent Successfully');
+        emit(ResendOtpSuccess(message: resendResponse.message));
+      } else {
+        // Handle backend errors
+        print('❌ Resend OTP Failed: ${resendResponse.message}');
+        emit(AuthError(
+          message: resendResponse.message,
+          fieldErrors: resendResponse.errors,
+        ));
+      }
+    } catch (e) {
+      print('❌ Resend OTP Error: $e');
+      print('Error Type: ${e.runtimeType}');
+      
+      String errorMessage = 'Network error. Please check your connection.';
+      
+      if (e.toString().contains('SocketException')) {
+        errorMessage = 'No internet connection. Please check your network.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.toString().contains('FormatException')) {
+        errorMessage = 'Invalid response format from server.';
+      } else if (e.toString().contains('HttpException')) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      print('Error Message: $errorMessage');
+      emit(AuthError(message: errorMessage));
     }
   }
 
@@ -222,5 +425,50 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // Removed profile-related API methods - keeping only UI functionality
+  // 🔹 Update Phone
+  Future<void> _onUpdatePhone(UpdatePhoneEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+
+    try {
+      final token = await StorageHelper.getString('auth_token');
+      if (token == null) {
+        emit(AuthError(message: 'Authentication required'));
+        return;
+      }
+
+      final updateRequest = UpdatePhoneRequest(phone: event.phone);
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/customer/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(updateRequest.toJson()),
+      );
+
+      final updateResponse = UpdatePhoneResponse.fromJson(jsonDecode(response.body));
+
+      if (response.statusCode == 200 && updateResponse.success) {
+        // Update stored user data
+        if (updateResponse.customer != null) {
+          await StorageHelper.setString('user_data', jsonEncode(updateResponse.customer!.toJson()));
+          emit(PhoneUpdateSuccess(
+            message: updateResponse.message,
+            customer: updateResponse.customer!,
+          ));
+        } else {
+          emit(AuthError(message: 'Failed to update phone number'));
+        }
+      } else {
+        emit(AuthError(
+          message: updateResponse.message,
+          fieldErrors: updateResponse.errors,
+        ));
+      }
+    } catch (e) {
+      emit(AuthError(message: 'Network error. Please check your connection.'));
+    }
+  }
 }

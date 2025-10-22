@@ -17,12 +17,45 @@ class MyProfilePage extends StatefulWidget {
 
 class _MyProfilePageState extends State<MyProfilePage> {
   final ImagePicker _picker = ImagePicker();
+  final TextEditingController _phoneController = TextEditingController();
+  bool _isEditingPhone = false;
 
   @override
   void initState() {
     super.initState();
     // Fetch profile data when screen loads
     context.read<ProfileImageBloc>().add(FetchProfileEvent());
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  void _startEditingPhone(String currentPhone) {
+    setState(() {
+      _isEditingPhone = true;
+      _phoneController.text = currentPhone;
+    });
+  }
+
+  void _cancelEditingPhone() {
+    setState(() {
+      _isEditingPhone = false;
+      _phoneController.clear();
+    });
+  }
+
+  void _savePhoneNumber() {
+    if (_phoneController.text.isNotEmpty) {
+      context.read<AuthBloc>().add(
+        UpdatePhoneEvent(phone: _phoneController.text),
+      );
+      setState(() {
+        _isEditingPhone = false;
+      });
+    }
   }
 
   void _showImagePicker(BuildContext context) {
@@ -105,35 +138,60 @@ class _MyProfilePageState extends State<MyProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ProfileImageBloc, ProfileImageState>(
-      listener: (context, state) {
-        if (state is ProfileImageUploadSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // Refresh profile data after successful upload
-          context.read<ProfileImageBloc>().add(FetchProfileEvent());
-        } else if (state is ProfileImageDeleteSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.green,
-            ),
-          );
-          // Refresh profile data after successful deletion
-          context.read<ProfileImageBloc>().add(FetchProfileEvent());
-        } else if (state is ProfileImageError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ProfileImageBloc, ProfileImageState>(
+          listener: (context, state) {
+            if (state is ProfileImageUploadSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Refresh profile data after successful upload
+              context.read<ProfileImageBloc>().add(FetchProfileEvent());
+            } else if (state is ProfileImageDeleteSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Refresh profile data after successful deletion
+              context.read<ProfileImageBloc>().add(FetchProfileEvent());
+            } else if (state is ProfileImageError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+        BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is PhoneUpdateSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Update AuthBloc with new customer data
+              context.read<AuthBloc>().add(CheckAuthStatusEvent());
+            } else if (state is AuthError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
@@ -290,14 +348,99 @@ class _MyProfilePageState extends State<MyProfilePage> {
                       children: [
                         const Icon(Icons.phone_outlined, size: 22),
                         const SizedBox(width: 10),
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            if (state is AuthSuccess) {
-                              return Text(state.customer.phone);
-                            }
-                            return SizedBox();
-                          },
+                        Expanded(
+                          child: _isEditingPhone
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                    color: Colors.blue.withOpacity(0.05),
+                                  ),
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      hintText: 'Enter phone number',
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                )
+                              : BlocBuilder<AuthBloc, AuthState>(
+                                  builder: (context, state) {
+                                    if (state is AuthSuccess) {
+                                      return Text(
+                                        state.customer.phone,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      );
+                                    }
+                                    return const SizedBox();
+                                  },
+                                ),
                         ),
+                        const SizedBox(width: 8),
+                        _isEditingPhone
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GestureDetector(
+                                    onTap: _savePhoneNumber,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: _cancelEditingPhone,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : BlocBuilder<AuthBloc, AuthState>(
+                                builder: (context, state) {
+                                  if (state is AuthSuccess) {
+                                    return GestureDetector(
+                                      onTap: () => _startEditingPhone(state.customer.phone),
+                                      child: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 20,
+                                        color: Colors.blue,
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox();
+                                },
+                              ),
                       ],
                     ),
                   ],
