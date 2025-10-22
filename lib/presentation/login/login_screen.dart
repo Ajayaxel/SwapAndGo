@@ -194,11 +194,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
                             return GoButton(
-                              onPressed: state is AuthLoading ? null : _handleLogin,
-                              text: state is AuthLoading ? "LOGGING IN..." : "LOGIN",
+                              onPressed: _handleLogin,
+                              text: "LOGIN",
                               backgroundColor: Colors.white,
                               textColor: Colors.black,
                               foregroundColor: Colors.black,
+                              isLoading: state is AuthLoading,
+                              loadingText: "LOGGING IN...",
                             );
                           },
                         ),

@@ -352,7 +352,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                         ? null
                                         : _handleSignup,
                                     text: state is AuthLoading
-                                        ? "SIGNING UP..."
+                                        ? "SIGNING UP PLEASE WAIT..."
                                         : "SIGN UP",
                                     backgroundColor: Colors.white,
                                     textColor: Colors.black,
