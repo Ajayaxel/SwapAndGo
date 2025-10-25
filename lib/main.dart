@@ -7,9 +7,11 @@ import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/qrcode/qrcode_bloc.dart';
 import 'package:swap_app/bloc/profile_image/profile_image_bloc.dart';
+import 'package:swap_app/bloc/address/address_bloc.dart';
 import 'package:swap_app/presentation/widget/app_wrapper.dart';
 import 'package:swap_app/repo/station_repository.dart';
 import 'package:swap_app/repo/profile_image_repository.dart';
+import 'package:swap_app/repo/address_repository.dart';
 import 'package:swap_app/services/storage_helper.dart';
 
 void main() async {
@@ -35,6 +37,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (context) => ProfileImageBloc(repository: ProfileImageRepository()),
+        ),
+        BlocProvider(
+          create: (context) => AddressBloc(addressRepository: AddressRepository()),
         ),
       ],
       child: MaterialApp(

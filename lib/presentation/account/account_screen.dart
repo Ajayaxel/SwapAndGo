@@ -7,10 +7,11 @@ import 'package:swap_app/bloc/profile_image/profile_image_bloc.dart';
 import 'package:swap_app/bloc/profile_image/profile_image_event.dart';
 import 'package:swap_app/bloc/profile_image/profile_image_state.dart';
 import 'package:swap_app/const/go_button.dart';
-import 'package:swap_app/presentation/account/history_screen.dart';
+import 'package:swap_app/presentation/account/my_active_subscription_screen.dart';
+import 'package:swap_app/presentation/account/swap_history_screen.dart';
 import 'package:swap_app/presentation/account/my_profile.dart';
 import 'package:swap_app/presentation/account/subscription_screen.dart';
-import 'package:swap_app/presentation/account/transaction_history.dart';
+import 'package:swap_app/presentation/account/subscription_history.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -67,7 +68,7 @@ class _AccountScreenState extends State<AccountScreen> {
         maxHeight: 1024,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         final File imageFile = File(image.path);
         context.read<ProfileImageBloc>().add(
@@ -75,9 +76,9 @@ class _AccountScreenState extends State<AccountScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
     }
   }
 
@@ -96,10 +97,7 @@ class _AccountScreenState extends State<AccountScreen> {
           context.read<ProfileImageBloc>().add(FetchProfileEvent());
         } else if (state is ProfileImageError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
           );
         }
       },
@@ -142,70 +140,78 @@ class _AccountScreenState extends State<AccountScreen> {
                       children: [
                         GestureDetector(
                           onTap: () => _showImagePicker(context),
-                          child: BlocBuilder<ProfileImageBloc, ProfileImageState>(
-                            builder: (context, state) {
-                              String? profileImageUrl;
-                              
-                              if (state is ProfileImageFetchSuccess) {
-                                profileImageUrl = state.customer.profileImageUrl;
-                              } else if (state is ProfileImageUploadSuccess) {
-                                profileImageUrl = state.imageUrl;
-                              }
-                              
-                              return Stack(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 25,
-                                    backgroundImage: profileImageUrl != null
-                                        ? NetworkImage(profileImageUrl)
-                                        : null,
-                                    child: profileImageUrl == null
-                                        ? Icon(
-                                            Icons.person,
-                                            size: 30,
-                                            color: Colors.grey,
-                                          )
-                                        : null,
-                                  ),
-                                  if (state is ProfileImageLoading)
-                                    Positioned.fill(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.5),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          child:
+                              BlocBuilder<ProfileImageBloc, ProfileImageState>(
+                                builder: (context, state) {
+                                  String? profileImageUrl;
+
+                                  if (state is ProfileImageFetchSuccess) {
+                                    profileImageUrl =
+                                        state.customer.profileImageUrl;
+                                  } else if (state
+                                      is ProfileImageUploadSuccess) {
+                                    profileImageUrl = state.imageUrl;
+                                  }
+
+                                  return Stack(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 25,
+                                        backgroundImage: profileImageUrl != null
+                                            ? NetworkImage(profileImageUrl)
+                                            : null,
+                                        child: profileImageUrl == null
+                                            ? Icon(
+                                                Icons.person,
+                                                size: 30,
+                                                color: Colors.grey,
+                                              )
+                                            : null,
+                                      ),
+                                      if (state is ProfileImageLoading)
+                                        Positioned.fill(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(
+                                                0.5,
+                                              ),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.white),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.camera_alt,
+                                            size: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      padding: EdgeInsets.all(4),
-                                      child: Icon(
-                                        Icons.camera_alt,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                                    ],
+                                  );
+                                },
+                              ),
                         ),
                         SizedBox(width: 16),
 
@@ -219,7 +225,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               );
-                            }else if (state is AuthError) {
+                            } else if (state is AuthError) {
                               return Text(
                                 state.message,
                                 style: TextStyle(
@@ -242,82 +248,98 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                 ),
-              SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildTile(
+                        icon: Icons.list_alt_outlined,
+                        title: "Subscription plans",
+                        subtitle: "Lorem ipsum",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SubscriptionScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _divider(),
+                      _buildTile(
+                        icon: Icons.subscriptions,
+                        title: "My Active Subscription",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const MyActiveSubscriptionScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _divider(),
+
+                      _buildTile(
+                        icon: Icons.receipt_long_outlined,
+                        title: "Subscription History",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const SubscriptionHistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _divider(),
+                      _buildTile(
+                        icon: Icons.history,
+                        title: " History",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildTile(
-                      icon: Icons.list_alt_outlined,
-                      title: "My subscriptions",
-                      subtitle: "Lorem ipsum",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SubscriptionScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _divider(),
-                    _buildTile(
-                      icon: Icons.history,
-                      title: "History",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const HistoryScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _divider(),
-                    _buildTile(
-                      icon: Icons.receipt_long_outlined,
-                      title: "Transaction History",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TransactionHistoryScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                SizedBox(height: 50),
+                GoButton(
+                  onPressed: () {
+                    context.read<AuthBloc>().add(LogoutEvent());
+                    // No functionality - just UI
+                    print('Logout pressed');
+                  },
+                  text: "Logout",
+                  backgroundColor: Colors.black,
+                  textColor: Colors.white,
+                  foregroundColor: Colors.white,
                 ),
-              ),
-              SizedBox(height: 50),
-              GoButton(
-                onPressed: () {
-                  context.read<AuthBloc>().add(LogoutEvent());
-                  // No functionality - just UI
-                  print('Logout pressed');
-                },
-                text: "Logout",
-                backgroundColor: Colors.black,
-                textColor: Colors.white,
-                foregroundColor: Colors.white,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 }
 

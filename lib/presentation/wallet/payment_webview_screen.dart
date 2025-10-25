@@ -223,12 +223,12 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
                     color: AppColors.goBlue,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  "AED ${widget.amount.toStringAsFixed(2)} has been added to your wallet",
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
-                ),
+                // const SizedBox(height: 8),
+                // Text(
+                //   "AED ${widget.amount.toStringAsFixed(2)} has been added to your wallet",
+                //   textAlign: TextAlign.center,
+                //   style: const TextStyle(fontSize: 14, color: Colors.black),
+                // ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,

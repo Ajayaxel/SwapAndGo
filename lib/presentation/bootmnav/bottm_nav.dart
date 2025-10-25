@@ -3,6 +3,7 @@ import 'package:swap_app/presentation/account/account_screen.dart';
 import 'package:swap_app/presentation/home/home_page.dart';
 import 'package:swap_app/presentation/station/station_screen.dart';
 import 'package:swap_app/presentation/wallet/wallet_screen.dart';
+import 'package:swap_app/presentation/qr_scanner/qr_scanner_screen.dart';
 import 'package:swap_app/widgets/auth_listener.dart';
 
 class BottomNav extends StatefulWidget {
@@ -13,57 +14,6 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-
-void _showBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Coming Soon',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'This feature will be available soon.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK',style: TextStyle(color: Colors.white),),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
@@ -87,7 +37,12 @@ void _showBottomSheet(BuildContext context) {
         body: _screens[_selectedIndex],
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            _showBottomSheet(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const QRScannerScreen(),
+              ),
+            );
           },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),

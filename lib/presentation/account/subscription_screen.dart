@@ -3,10 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:swap_app/bloc/subscription_plan/subscription_plan_bloc.dart';
 import 'package:swap_app/bloc/subscription_plan/subscription_plan_event.dart';
 import 'package:swap_app/bloc/subscription_plan/subscription_plan_state.dart';
+import 'package:swap_app/bloc/subscription_payment/subscription_payment_bloc.dart';
+import 'package:swap_app/bloc/subscription_payment/subscription_payment_event.dart';
+import 'package:swap_app/bloc/subscription_payment/subscription_payment_state.dart';
 import 'package:swap_app/const/go_button.dart';
 import 'package:swap_app/model/subscription_plan_model.dart';
 import 'package:swap_app/presentation/account/roadside_assistance_screnn.dart';
 import 'package:swap_app/presentation/account/sawp_go_connted_screen.dart';
+import 'package:swap_app/presentation/wallet/payment_webview_screen.dart';
 import 'package:swap_app/repo/subscription_plan_repository.dart';
 
 class SubscriptionScreen extends StatelessWidget {
@@ -14,16 +18,30 @@ class SubscriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => SubscriptionPlanBloc(SubscriptionPlanRepository())
-        ..add(LoadSubscriptionPlans()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => SubscriptionPlanBloc(SubscriptionPlanRepository())
+            ..add(LoadSubscriptionPlans()),
+        ),
+        BlocProvider(
+          create: (context) => SubscriptionPaymentBloc(),
+        ),
+      ],
       child: const SubscriptionScreenContent(),
     );
   }
 }
 
-class SubscriptionScreenContent extends StatelessWidget {
+class SubscriptionScreenContent extends StatefulWidget {
   const SubscriptionScreenContent({super.key});
+
+  @override
+  State<SubscriptionScreenContent> createState() => _SubscriptionScreenContentState();
+}
+
+class _SubscriptionScreenContentState extends State<SubscriptionScreenContent> {
+  int? _processingPlanId;
 
   @override
   Widget build(BuildContext context) {
@@ -242,31 +260,101 @@ class SubscriptionScreenContent extends StatelessWidget {
           // Choose Plan Button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Add your plan selection logic here
-                print('Selected plan: ${plan.name}');
+            child: BlocConsumer<SubscriptionPaymentBloc, SubscriptionPaymentState>(
+              listener: (context, state) {
+                if (state is PaymentInitialized) {
+                  setState(() {
+                    _processingPlanId = null;
+                  });
+                  // Navigate to payment webview screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PaymentWebViewScreen(
+                        iframeUrl: state.paymentResponse.data.paymentUrl,
+                        paymentId: state.paymentResponse.data.subscriptionId.toString(),
+                        amount: double.parse(state.paymentResponse.data.amount),
+                      ),
+                    ),
+                  );
+                } else if (state is PaymentError) {
+                  setState(() {
+                    _processingPlanId = null;
+                  });
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF7F7F7),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                  side: const BorderSide(
-                    color: Color(0xFF0A2342),
-                    width: 1.5,
+              builder: (context, state) {
+                // Check if this specific plan is being processed
+                final isLoading = _processingPlanId == plan.id;
+                
+                return ElevatedButton(
+                  onPressed: isLoading ? null : () {
+                    // Set processing plan ID immediately when button is pressed
+                    setState(() {
+                      _processingPlanId = plan.id;
+                    });
+                    // Initialize payment for the selected plan
+                    context.read<SubscriptionPaymentBloc>().add(
+                      InitializePayment(planId: plan.id),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isLoading 
+                        ? const Color(0xFFE0E0E0) 
+                        : const Color(0xFFF7F7F7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                      side: const BorderSide(
+                        color: Color(0xFF0A2342),
+                        width: 1.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    elevation: 0,
                   ),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                elevation: 0,
-              ),
-              child: const Text(
-                "Choose plan",
-                style: TextStyle(
-                  color: Color(0xFF0A2342),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+                  child: isLoading
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF0A2342),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              "Initializing...",
+                              style: TextStyle(
+                                color: Color(0xFF0A2342),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        )
+                      : const Text(
+                          "Choose plan",
+                          style: TextStyle(
+                            color: Color(0xFF0A2342),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 20),

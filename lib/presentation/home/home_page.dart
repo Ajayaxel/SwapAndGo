@@ -309,7 +309,7 @@ class _HomeContentModularState extends State<HomePage> {
           ),
           const SizedBox(height: 4),
           const Text('Welcome', style: TextStyle(fontSize: 20)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
           Row(
             children: [
               const Icon(Icons.location_on_outlined, size: 18),
@@ -322,61 +322,61 @@ class _HomeContentModularState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
           
           // Battery status
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Baseline(
-                baseline: 65,
-                baselineType: TextBaseline.alphabetic,
-                child: const Icon(Icons.battery_3_bar, size: 70),
-              ),
-              const SizedBox(width: 10),
-              Baseline(
-                baseline: 65,
-                baselineType: TextBaseline.alphabetic,
-                child: const Text(
-                  '51',
-                  style: TextStyle(
-                    fontSize: 70,
-                    fontWeight: FontWeight.w600,
-                    height: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Baseline(
-                baseline: 70,
-                baselineType: TextBaseline.alphabetic,
-                child: const Text(
-                  'km',
-                  style: TextStyle(fontSize: 24, height: 1),
-                ),
-              ),
-            ],
-          ),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.center,
+          //   children: [
+          //     Baseline(
+          //       baseline: 65,
+          //       baselineType: TextBaseline.alphabetic,
+          //       child: const Icon(Icons.battery_3_bar, size: 70),
+          //     ),
+          //     const SizedBox(width: 10),
+          //     Baseline(
+          //       baseline: 65,
+          //       baselineType: TextBaseline.alphabetic,
+          //       child: const Text(
+          //         '51',
+          //         style: TextStyle(
+          //           fontSize: 70,
+          //           fontWeight: FontWeight.w600,
+          //           height: 1,
+          //         ),
+          //       ),
+          //     ),
+          //     const SizedBox(width: 4),
+          //     Baseline(
+          //       baseline: 70,
+          //       baselineType: TextBaseline.alphabetic,
+          //       child: const Text(
+          //         'km',
+          //         style: TextStyle(fontSize: 24, height: 1),
+          //       ),
+          //     ),
+          //   ],
+          // ),
 
           // Progress bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Column(
-              children: [
-                LinearProgressIndicator(
-                  value: 0.55,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade300,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
-                const SizedBox(height: 6),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('55%', style: TextStyle(fontSize: 14)),
-                ),
-              ],
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          //   child: Column(
+          //     children: [
+          //       LinearProgressIndicator(
+          //         value: 0.55,
+          //         minHeight: 8,
+          //         backgroundColor: Colors.grey.shade300,
+          //         valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+          //       ),
+          //       const SizedBox(height: 6),
+          //       const Align(
+          //         alignment: Alignment.centerLeft,
+          //         child: Text('55%', style: TextStyle(fontSize: 14)),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );
@@ -386,7 +386,7 @@ class _HomeContentModularState extends State<HomePage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
-        height: 450,
+        height: 500,
         child: Stack(
           children: [
             // Map

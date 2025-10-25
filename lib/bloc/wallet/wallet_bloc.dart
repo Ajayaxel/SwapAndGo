@@ -48,7 +48,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data['success'] == true) {
+      if (response.statusCode == 201 && data['success'] == true) {
         final depositResponse = WalletDepositResponse.fromJson(data);
         print(
           '✅ Deposit API Success - iframe URL: ${depositResponse.data.iframeUrl}',

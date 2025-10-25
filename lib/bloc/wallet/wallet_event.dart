@@ -33,4 +33,3 @@ class ResetWalletEvent extends WalletEvent {
 class FetchWalletBalanceEvent extends WalletEvent {
   const FetchWalletBalanceEvent();
 }
-
