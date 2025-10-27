@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swap_app/bloc/active_subscription/active_subscription_bloc.dart';
 import 'package:swap_app/bloc/auth_bloc.dart';
-
+ import 'package:swap_app/services/active_subscription_service.dart';
 import 'package:swap_app/bloc/station/station_bloc.dart';
 import 'package:swap_app/bloc/station/station_event.dart';
 import 'package:swap_app/bloc/qrcode/qrcode_bloc.dart';
@@ -40,6 +41,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (context) => AddressBloc(addressRepository: AddressRepository()),
+        ),
+        BlocProvider(
+          create: (context) => ActiveSubscriptionBloc(activeSubscriptionService: ActiveSubscriptionService()),
         ),
       ],
       child: MaterialApp(

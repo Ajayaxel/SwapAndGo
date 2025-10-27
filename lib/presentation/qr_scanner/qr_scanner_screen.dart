@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:swap_app/model/qr_scan_data.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:swap_app/presentation/qr_scanner/swap_details_screen.dart';
+import 'package:swap_app/utils/permission_helper.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -44,7 +45,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
-  void _initializeScanner() {
+  void _initializeScanner() async {
+    // Check camera permission before initializing scanner
+    final hasPermission = await PermissionHelper.isCameraPermissionGranted();
+    if (!hasPermission) {
+      final granted = await PermissionHelper.requestCameraPermission();
+      if (!granted) {
+        setState(() {
+          _errorMessage = 'Camera permission is required to scan QR codes';
+        });
+        return;
+      }
+    }
+    
     scannerController = MobileScannerController();
   }
 
@@ -358,8 +371,71 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
+                  // Permission Error Display
+                  if (_errorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.camera_alt_outlined,
+                              size: 64,
+                              color: Colors.red.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Camera Permission Required',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.red.shade600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                final granted = await PermissionHelper.requestCameraPermission();
+                                if (granted) {
+                                  setState(() {
+                                    _errorMessage = null;
+                                  });
+                                  _initializeScanner();
+                                } else {
+                                  PermissionHelper.showPermissionDeniedDialog(context, 'camera');
+                                }
+                              },
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Grant Camera Permission'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade600,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
                   // Camera Preview or Placeholder
-                  if (!_scanCompleted)
+                  else if (!_scanCompleted)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: MobileScanner(

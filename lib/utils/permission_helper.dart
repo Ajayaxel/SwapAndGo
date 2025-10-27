@@ -65,17 +65,104 @@ class PermissionHelper {
     return status == PermissionStatus.granted;
   }
 
+  /// Request location permission
+  static Future<bool> requestLocationPermission() async {
+    print('🔐 Requesting location permission...');
+    
+    final status = await Permission.location.request();
+    print('📍 Location permission status: $status');
+    
+    if (status == PermissionStatus.granted) {
+      print('✅ Location permission granted');
+      return true;
+    } else if (status == PermissionStatus.denied) {
+      print('❌ Location permission denied');
+      return false;
+    } else if (status == PermissionStatus.permanentlyDenied) {
+      print('❌ Location permission permanently denied');
+      return false;
+    }
+    
+    return false;
+  }
+
+  /// Request fine location permission
+  static Future<bool> requestFineLocationPermission() async {
+    print('🔐 Requesting fine location permission...');
+    
+    final status = await Permission.locationWhenInUse.request();
+    print('📍 Fine location permission status: $status');
+    
+    if (status == PermissionStatus.granted) {
+      print('✅ Fine location permission granted');
+      return true;
+    } else if (status == PermissionStatus.denied) {
+      print('❌ Fine location permission denied');
+      return false;
+    } else if (status == PermissionStatus.permanentlyDenied) {
+      print('❌ Fine location permission permanently denied');
+      return false;
+    }
+    
+    return false;
+  }
+
+  /// Check if location permission is granted
+  static Future<bool> isLocationPermissionGranted() async {
+    final status = await Permission.location.status;
+    print('📍 Location permission check: $status');
+    return status == PermissionStatus.granted;
+  }
+
+  /// Check if fine location permission is granted
+  static Future<bool> isFineLocationPermissionGranted() async {
+    final status = await Permission.locationWhenInUse.status;
+    print('📍 Fine location permission check: $status');
+    return status == PermissionStatus.granted;
+  }
+
+  /// Request all required permissions for the app
+  static Future<Map<String, bool>> requestAllPermissions() async {
+    print('🔐 Requesting all app permissions...');
+    
+    Map<String, bool> results = {};
+    
+    // Request camera permission
+    results['camera'] = await requestCameraPermission();
+    
+    // Request location permission
+    results['location'] = await requestLocationPermission();
+    
+    // Request photo library permission
+    results['photos'] = await requestPhotoLibraryPermission();
+    
+    print('📊 Permission results: $results');
+    return results;
+  }
+
   /// Show permission denied dialog
   static void showPermissionDeniedDialog(BuildContext context, String permissionType) {
+    String message = '';
+    switch (permissionType.toLowerCase()) {
+      case 'camera':
+        message = 'This app needs camera permission to scan QR codes and take photos. Please grant permission in your device settings.';
+        break;
+      case 'location':
+        message = 'This app needs location permission to find nearby battery stations and provide navigation. Please grant permission in your device settings.';
+        break;
+      case 'photos':
+        message = 'This app needs photo library permission to access your photos. Please grant permission in your device settings.';
+        break;
+      default:
+        message = 'This app needs $permissionType permission to function properly. Please grant permission in your device settings.';
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Permission Required'),
-          content: Text(
-            'This app needs $permissionType permission to access your photos. '
-            'Please grant permission in your device settings.',
-          ),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -96,14 +183,27 @@ class PermissionHelper {
 
   /// Show permission explanation dialog
   static void showPermissionExplanationDialog(BuildContext context, String permissionType) {
+    String message = '';
+    switch (permissionType.toLowerCase()) {
+      case 'camera':
+        message = 'This app needs camera permission to scan QR codes and take photos for your profile.';
+        break;
+      case 'location':
+        message = 'This app needs location permission to find nearby battery stations and provide navigation services.';
+        break;
+      case 'photos':
+        message = 'This app needs photo library permission to let you select photos for your profile picture.';
+        break;
+      default:
+        message = 'This app needs $permissionType permission to function properly.';
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Permission Required'),
-          content: Text(
-            'This app needs $permissionType permission to let you select photos for your profile picture.',
-          ),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

@@ -529,6 +529,13 @@ class MyActiveSubscriptionView extends StatelessWidget {
     BuildContext context,
     ActiveSubscriptionData subscription,
   ) {
+    // Don't show cancel button if subscription is already cancelled or inactive
+    if (subscription.status.toLowerCase() == 'cancelled' || 
+        subscription.status.toLowerCase() == 'canceled' ||
+        subscription.status.toLowerCase() == 'inactive') {
+      return const SizedBox.shrink();
+    }
+
     return Row(
       children: [
         Expanded(
@@ -648,29 +655,33 @@ class MyActiveSubscriptionView extends StatelessWidget {
               style: const TextStyle(fontSize: 14, color: Color(0xff666666)),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                context.read<ActiveSubscriptionBloc>().add(
-                  RefreshActiveSubscription(),
+            BlocBuilder<ActiveSubscriptionBloc, ActiveSubscriptionState>(
+              builder: (context, state) {
+                return ElevatedButton(
+                  onPressed: () {
+                    context.read<ActiveSubscriptionBloc>().add(
+                      RefreshActiveSubscription(),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
+                    backgroundColor: const Color(0xff4CAF50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Try Again',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-                backgroundColor: const Color(0xff4CAF50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Try Again',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
@@ -710,29 +721,33 @@ class MyActiveSubscriptionView extends StatelessWidget {
               style: const TextStyle(fontSize: 14, color: Color(0xff666666)),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                context.read<ActiveSubscriptionBloc>().add(
-                  RefreshActiveSubscription(),
+            BlocBuilder<ActiveSubscriptionBloc, ActiveSubscriptionState>(
+              builder: (context, state) {
+                return ElevatedButton(
+                  onPressed: () {
+                    context.read<ActiveSubscriptionBloc>().add(
+                      RefreshActiveSubscription(),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
+                    backgroundColor: const Color(0xff4CAF50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-                backgroundColor: const Color(0xff4CAF50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Retry',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
