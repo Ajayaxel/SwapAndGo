@@ -77,131 +77,24 @@ class _AddressEditFormState extends State<AddressEditForm> {
       print('🔍 Available countries: ${_countries.map((c) => '${c.name} (${c.id})').join(', ')}');
     } catch (e) {
       print('❌ Failed to load countries from server: $e');
-      print('🔄 Using fallback country list...');
       
-      // Use fallback country list
       setState(() {
-        _countries = _getFallbackCountries();
+        _countries = [];
         _isLoadingCountries = false;
       });
       
-      // Check if the current address country exists in fallback countries
-      final countryExists = _countries.any((country) => country.id == _selectedCountryId);
-      if (!countryExists && _countries.isNotEmpty) {
-        print('⚠️ Current address country ID $_selectedCountryId not found in fallback countries, using first available country');
-        _selectedCountryId = _countries.first.id;
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load countries: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-      
-      print('✅ Loaded ${_countries.length} countries from fallback list');
-      print('🔍 Current selected country ID: $_selectedCountryId');
     }
   }
 
-  List<Country> _getFallbackCountries() {
-    // Conservative list with common countries and lower IDs that are more likely to be supported by server
-    return [
-      Country(id: 1, name: 'United States', code: 'US'),
-      Country(id: 2, name: 'Canada', code: 'CA'),
-      Country(id: 3, name: 'United Kingdom', code: 'GB'),
-      Country(id: 4, name: 'Australia', code: 'AU'),
-      Country(id: 5, name: 'Germany', code: 'DE'),
-      Country(id: 6, name: 'Italy', code: 'IT'),
-      Country(id: 7, name: 'France', code: 'FR'),
-      Country(id: 8, name: 'Spain', code: 'ES'),
-      Country(id: 9, name: 'Netherlands', code: 'NL'),
-      Country(id: 10, name: 'Belgium', code: 'BE'),
-      Country(id: 11, name: 'Switzerland', code: 'CH'),
-      Country(id: 12, name: 'Austria', code: 'AT'),
-      Country(id: 13, name: 'Sweden', code: 'SE'),
-      Country(id: 14, name: 'Norway', code: 'NO'),
-      Country(id: 15, name: 'Denmark', code: 'DK'),
-      Country(id: 16, name: 'Finland', code: 'FI'),
-      Country(id: 17, name: 'Poland', code: 'PL'),
-      Country(id: 18, name: 'Czech Republic', code: 'CZ'),
-      Country(id: 19, name: 'Hungary', code: 'HU'),
-      Country(id: 20, name: 'Portugal', code: 'PT'),
-      Country(id: 21, name: 'Greece', code: 'GR'),
-      Country(id: 22, name: 'Turkey', code: 'TR'),
-      Country(id: 23, name: 'Russia', code: 'RU'),
-      Country(id: 24, name: 'Japan', code: 'JP'),
-      Country(id: 25, name: 'China', code: 'CN'),
-      Country(id: 26, name: 'South Korea', code: 'KR'),
-      Country(id: 27, name: 'India', code: 'IN'),
-      Country(id: 28, name: 'Brazil', code: 'BR'),
-      Country(id: 29, name: 'Mexico', code: 'MX'),
-      Country(id: 30, name: 'Argentina', code: 'AR'),
-      Country(id: 31, name: 'Chile', code: 'CL'),
-      Country(id: 32, name: 'Colombia', code: 'CO'),
-      Country(id: 33, name: 'Peru', code: 'PE'),
-      Country(id: 34, name: 'Venezuela', code: 'VE'),
-      Country(id: 35, name: 'South Africa', code: 'ZA'),
-      Country(id: 36, name: 'Egypt', code: 'EG'),
-      Country(id: 37, name: 'Nigeria', code: 'NG'),
-      Country(id: 38, name: 'Kenya', code: 'KE'),
-      Country(id: 39, name: 'Morocco', code: 'MA'),
-      Country(id: 40, name: 'Tunisia', code: 'TN'),
-      Country(id: 41, name: 'Algeria', code: 'DZ'),
-      Country(id: 42, name: 'Libya', code: 'LY'),
-      Country(id: 43, name: 'Sudan', code: 'SD'),
-      Country(id: 44, name: 'Ethiopia', code: 'ET'),
-      Country(id: 45, name: 'Ghana', code: 'GH'),
-      Country(id: 46, name: 'Uganda', code: 'UG'),
-      Country(id: 47, name: 'Tanzania', code: 'TZ'),
-      Country(id: 48, name: 'Zimbabwe', code: 'ZW'),
-      Country(id: 49, name: 'Botswana', code: 'BW'),
-      Country(id: 50, name: 'Namibia', code: 'NA'),
-      Country(id: 51, name: 'Zambia', code: 'ZM'),
-      Country(id: 52, name: 'Malawi', code: 'MW'),
-      Country(id: 53, name: 'Mozambique', code: 'MZ'),
-      Country(id: 54, name: 'Madagascar', code: 'MG'),
-      Country(id: 55, name: 'Mauritius', code: 'MU'),
-      Country(id: 56, name: 'Seychelles', code: 'SC'),
-      Country(id: 57, name: 'Rwanda', code: 'RW'),
-      Country(id: 58, name: 'Burundi', code: 'BI'),
-      Country(id: 59, name: 'Somalia', code: 'SO'),
-      Country(id: 60, name: 'Djibouti', code: 'DJ'),
-      Country(id: 61, name: 'Eritrea', code: 'ER'),
-      Country(id: 62, name: 'Chad', code: 'TD'),
-      Country(id: 63, name: 'Niger', code: 'NE'),
-      Country(id: 64, name: 'Mali', code: 'ML'),
-      Country(id: 65, name: 'Burkina Faso', code: 'BF'),
-      Country(id: 66, name: 'Senegal', code: 'SN'),
-      Country(id: 67, name: 'Guinea', code: 'GN'),
-      Country(id: 68, name: 'Sierra Leone', code: 'SL'),
-      Country(id: 69, name: 'Liberia', code: 'LR'),
-      Country(id: 70, name: 'Ivory Coast', code: 'CI'),
-      Country(id: 71, name: 'Togo', code: 'TG'),
-      Country(id: 72, name: 'Benin', code: 'BJ'),
-      Country(id: 73, name: 'Cameroon', code: 'CM'),
-      Country(id: 74, name: 'Central African Republic', code: 'CF'),
-      Country(id: 75, name: 'Equatorial Guinea', code: 'GQ'),
-      Country(id: 76, name: 'Gabon', code: 'GA'),
-      Country(id: 77, name: 'Congo', code: 'CG'),
-      Country(id: 78, name: 'Democratic Republic of the Congo', code: 'CD'),
-      Country(id: 79, name: 'Angola', code: 'AO'),
-      Country(id: 80, name: 'Comoros', code: 'KM'),
-      Country(id: 81, name: 'Cape Verde', code: 'CV'),
-      Country(id: 82, name: 'São Tomé and Príncipe', code: 'ST'),
-      Country(id: 83, name: 'Guinea-Bissau', code: 'GW'),
-      Country(id: 84, name: 'Gambia', code: 'GM'),
-      Country(id: 85, name: 'United Arab Emirates', code: 'AE'),
-      Country(id: 86, name: 'Saudi Arabia', code: 'SA'),
-      Country(id: 87, name: 'Israel', code: 'IL'),
-      Country(id: 88, name: 'Jordan', code: 'JO'),
-      Country(id: 89, name: 'Lebanon', code: 'LB'),
-      Country(id: 90, name: 'Syria', code: 'SY'),
-      Country(id: 91, name: 'Iraq', code: 'IQ'),
-      Country(id: 92, name: 'Iran', code: 'IR'),
-      Country(id: 93, name: 'Afghanistan', code: 'AF'),
-      Country(id: 94, name: 'Pakistan', code: 'PK'),
-      Country(id: 95, name: 'Bangladesh', code: 'BD'),
-      Country(id: 96, name: 'Sri Lanka', code: 'LK'),
-      Country(id: 97, name: 'Nepal', code: 'NP'),
-      Country(id: 98, name: 'Bhutan', code: 'BT'),
-      Country(id: 99, name: 'Myanmar', code: 'MM'),
-      Country(id: 100, name: 'Thailand', code: 'TH'),
-    ];
-  }
 
   @override
   void dispose() {
@@ -215,6 +108,17 @@ class _AddressEditFormState extends State<AddressEditForm> {
 
   void _updateAddress() {
     if (_formKey.currentState!.validate()) {
+      // Check if countries are loaded
+      if (_countries.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please wait for countries to load or try again'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // Debug logging for country selection
       final selectedCountry = _countries.firstWhere(
         (country) => country.id == _selectedCountryId,
@@ -611,9 +515,13 @@ class _AddressEditFormState extends State<AddressEditForm> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  initialValue: _isLoadingCountries ? null : _selectedCountryId,
+                  value: _isLoadingCountries ? null : (_countries.isNotEmpty ? _selectedCountryId : null),
                   decoration: InputDecoration(
-                    hintText: _isLoadingCountries ? 'Loading countries...' : 'Select Country',
+                    hintText: _isLoadingCountries 
+                        ? 'Loading countries...' 
+                        : _countries.isEmpty 
+                            ? 'No countries available' 
+                            : 'Select Country',
                     hintStyle: TextStyle(
                       color: Colors.grey[400],
                       fontSize: 14,
@@ -644,7 +552,7 @@ class _AddressEditFormState extends State<AddressEditForm> {
                       child: Text(country.name),
                     );
                   }).toList(),
-                  onChanged: _isLoadingCountries ? null : (value) {
+                  onChanged: (_isLoadingCountries || _countries.isEmpty) ? null : (value) {
                     if (value != null) {
                       final selectedCountry = _countries.firstWhere((country) => country.id == value);
                       print('🔍 Country selected: ${selectedCountry.name} (ID: ${selectedCountry.id})');
@@ -655,7 +563,7 @@ class _AddressEditFormState extends State<AddressEditForm> {
                   },
                   validator: (value) {
                     if (value == null) {
-                      return 'Country is required';
+                      return _countries.isEmpty ? 'Countries not available' : 'Country is required';
                     }
                     return null;
                   },

@@ -148,8 +148,8 @@ class CreateAddressResponse {
     return CreateAddressResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
-      address: json['data'] != null && json['data']['address'] != null
-          ? Address.fromJson(json['data']['address'])
+      address: json['data'] != null
+          ? Address.fromJson(json['data'])
           : null,
       errors: json['errors'] != null
           ? Map<String, List<String>>.from(
@@ -215,8 +215,8 @@ class UpdateAddressResponse {
     return UpdateAddressResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
-      address: json['data'] != null && json['data']['address'] != null
-          ? Address.fromJson(json['data']['address'])
+      address: json['data'] != null
+          ? Address.fromJson(json['data'])
           : null,
       errors: json['errors'] != null
           ? Map<String, List<String>>.from(
@@ -244,8 +244,8 @@ class CountriesResponse {
   factory CountriesResponse.fromJson(Map<String, dynamic> json) {
     List<Country> countries = [];
     
-    if (json['data'] != null) {
-      final countriesList = json['data'] as List<dynamic>;
+    if (json['data'] != null && json['data']['countries'] != null) {
+      final countriesList = json['data']['countries'] as List<dynamic>;
       countries = countriesList
           .map((countryJson) => Country.fromJson(countryJson as Map<String, dynamic>))
           .toList();

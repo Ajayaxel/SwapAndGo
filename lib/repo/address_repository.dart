@@ -434,11 +434,106 @@ class AddressRepository {
     throw AddressApiException("Failed to delete address after $maxRetries attempts.", 0);
   }
 
-  /// Fetch countries from server (fallback to local list)
+  /// Fetch countries from server
   Future<List<Country>> fetchCountries() async {
-    // Since the countries API endpoint is not available, 
-    // we'll always throw an exception to trigger the fallback
-    throw AddressApiException("Countries endpoint not available.", 404);
+    const int maxRetries = 3;
+    int retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        // Check network connectivity
+        await _checkNetworkConnectivity();
+        
+        // Get authentication token
+        final token = await StorageHelper.getString('auth_token');
+        
+        if (token == null) {
+          throw AddressApiException("Authentication required. Please login again.", 401);
+        }
+
+        final countriesUrl = "https://onecharge.io/api/customer/addresses/countries";
+        print('🔍 Fetching countries from: $countriesUrl (Attempt ${retryCount + 1}/$maxRetries)');
+        
+        final response = await http.get(
+          Uri.parse(countriesUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(_timeout);
+
+        print('📡 Countries API Response: ${response.statusCode}');
+        print('📡 Response body: ${response.body}');
+
+        if (response.statusCode == 200) {
+          final jsonData = json.decode(response.body);
+          
+          // Check if the API response is successful
+          if (jsonData['success'] == true && jsonData['data'] != null) {
+            final countriesResponse = CountriesResponse.fromJson(jsonData);
+            print('✅ Successfully loaded ${countriesResponse.countries.length} countries');
+            return countriesResponse.countries;
+          } else {
+            final errorMessage = jsonData['message'] ?? "Failed to load countries";
+            print('❌ API Error: $errorMessage');
+            throw AddressApiException(errorMessage, response.statusCode);
+          }
+        } else if (response.statusCode == 401) {
+          print('❌ Authentication failed - Token may be expired');
+          throw AddressApiException("Authentication failed. Please login again.", response.statusCode);
+        } else if (response.statusCode == 403) {
+          print('❌ Access forbidden');
+          throw AddressApiException("Access denied. You don't have permission to view countries.", response.statusCode);
+        } else if (response.statusCode == 404) {
+          print('❌ Countries not found');
+          throw AddressApiException("Countries not found.", response.statusCode);
+        } else if (response.statusCode >= 500) {
+          print('❌ Server error: ${response.statusCode}');
+          throw AddressApiException("Server error. Please try again later.", response.statusCode);
+        } else {
+          print('❌ HTTP Error: ${response.statusCode}');
+          throw AddressApiException("Failed to load countries. Status: ${response.statusCode}", response.statusCode);
+        }
+      } on TimeoutException {
+        print('❌ Request timeout');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw AddressApiException("Request timeout. Please try again.", 0);
+        }
+        await Future.delayed(Duration(seconds: 2 * retryCount));
+      } on SocketException {
+        print('❌ Network error: No internet connection');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw AddressApiException("No internet connection. Please check your network and try again.", 0);
+        }
+        await Future.delayed(Duration(seconds: 2 * retryCount));
+      } on HttpException catch (e) {
+        print('❌ HTTP Exception: $e');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw AddressApiException("Network error: ${e.message}", 0);
+        }
+        await Future.delayed(Duration(seconds: 2 * retryCount));
+      } on FormatException catch (e) {
+        print('❌ Format Exception: $e');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw AddressApiException("Invalid response format from server.", 0);
+        }
+        await Future.delayed(Duration(seconds: 2 * retryCount));
+      } catch (e) {
+        print('❌ Unexpected error: $e');
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw AddressApiException("An unexpected error occurred: ${e.toString()}", 0);
+        }
+        await Future.delayed(Duration(seconds: 2 * retryCount));
+      }
+    }
+    
+    throw AddressApiException("Failed to fetch countries after $maxRetries attempts.", 0);
   }
 
   /// Check network connectivity

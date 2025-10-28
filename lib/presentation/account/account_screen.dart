@@ -309,7 +309,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       _divider(),
                       _buildTile(
                         icon: Icons.history,
-                        title: " History",
+                        title: "Swap History",
                         onTap: () {
                           Navigator.push(
                             context,
