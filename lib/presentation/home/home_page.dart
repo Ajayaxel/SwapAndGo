@@ -14,6 +14,7 @@ import '../../services/real_station_service.dart';
 import '../../widgets/reusable_map_widget.dart';
 import '../../widgets/station_search_widget.dart';
 import '../../widgets/station_bottom_sheet.dart';
+import '../map_choice/map_choice_modal.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -66,7 +67,7 @@ class _HomeContentModularState extends State<HomePage> {
       currentPosition: _navigationController.currentPosition,
       onSeeRoutes: () {
         Navigator.pop(context);
-        _navigationController.startNavigation();
+        _showMapChoiceModal(station);
       },
       onBook: () {
         Navigator.of(context).push(
@@ -74,6 +75,25 @@ class _HomeContentModularState extends State<HomePage> {
         );
 
       },
+    );
+  }
+
+  // Show map choice modal for directions
+  void _showMapChoiceModal(Station station) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MapChoiceModal(
+        destination: station.position,
+        destinationName: station.name,
+        currentLocation: _navigationController.currentPosition,
+        onCurrentMapSelected: () {
+          // Set destination and start navigation
+          _navigationController.setDestination(station.position);
+          _navigationController.startNavigation();
+        },
+      ),
     );
   }
 
@@ -105,7 +125,7 @@ class _HomeContentModularState extends State<HomePage> {
       currentPosition: _navigationController.currentPosition,
       onSeeRoutes: () {
         Navigator.pop(context);
-        _navigationController.startNavigation();
+        _showMapChoiceModal(station);
       },
       onBook: () {
         Navigator.of(context).push(

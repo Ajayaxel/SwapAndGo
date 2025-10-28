@@ -10,6 +10,7 @@ import '../../controllers/navigation_controller.dart';
 import '../../widgets/reusable_map_widget.dart';
 import '../../services/real_station_service.dart';
 import '../../model/station_model.dart';
+import '../map_choice/map_choice_modal.dart';
 
 final GlobalKey<StationScreenState> stationScreenKey =
     GlobalKey<StationScreenState>();
@@ -103,6 +104,28 @@ class StationScreenState extends State<StationScreen> {
   // Helper method to set station as destination for navigation
   void _setStationAsDestination(Station station) {
     _navigationController.setDestination(station.position);
+  }
+
+  // Show map choice modal for directions
+  void _showMapChoiceModal(Station station) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MapChoiceModal(
+        destination: station.position,
+        destinationName: station.name,
+        currentLocation: _navigationController.currentPosition,
+        onCurrentMapSelected: () {
+          // Set destination and show full-screen navigation
+          _setStationAsDestination(station);
+          setState(() {
+            _isFullscreenNavigation = true;
+          });
+          _navigationController.startNavigation();
+        },
+      ),
+    );
   }
 
   @override
@@ -414,12 +437,8 @@ class StationScreenState extends State<StationScreen> {
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pop(context);
-                              // Set destination and show full-screen navigation
-                              _setStationAsDestination(station);
-                              setState(() {
-                                _isFullscreenNavigation = true;
-                              });
-                              _navigationController.startNavigation();
+                              // Show map choice modal
+                              _showMapChoiceModal(station);
                             },
                             child: Row(
                               children: [
@@ -623,12 +642,8 @@ class StationScreenState extends State<StationScreen> {
                   ),
                   child: GestureDetector(
                     onTap: () {
-                      // Set destination and show full-screen navigation
-                      _setStationAsDestination(station);
-                      setState(() {
-                        _isFullscreenNavigation = true;
-                      });
-                      _navigationController.startNavigation();
+                      // Show map choice modal
+                      _showMapChoiceModal(station);
                     },
                     child: Row(
                       children: [

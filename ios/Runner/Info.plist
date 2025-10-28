@@ -70,5 +70,40 @@
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>waze</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>waze</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>maps</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>maps</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>comgooglemaps</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>comgooglemaps</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>waze</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>http</string>
+		<string>https</string>
+	</array>
 </dict>
 </plist>
