@@ -5,6 +5,13 @@ import 'package:geolocator/geolocator.dart';
 import '../model/navigation_models.dart';
 import '../services/map_service.dart';
 
+enum LocationPermissionStatus {
+  serviceDisabled,
+  denied,
+  deniedForever,
+  granted,
+}
+
 class NavigationController extends ChangeNotifier {
   final MapService _mapService = MapService();
 
@@ -45,8 +52,8 @@ class NavigationController extends ChangeNotifier {
     await _getCurrentLocation();
   }
 
-  /// Get current location
-  Future<void> _getCurrentLocation() async {
+  /// Get current location (no custom dialogs - let system handle it)
+  Future<void> _getCurrentLocation({bool requestIfNeeded = false}) async {
     try {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -57,27 +64,138 @@ class NavigationController extends ChangeNotifier {
 
       // Check location permission
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
+      
+      // Only request permission if explicitly requested and not denied forever
+      if (requestIfNeeded && permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          debugPrint('Location permissions are denied');
+          debugPrint('Location permissions are denied by user');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        debugPrint('Location permissions are permanently denied, we cannot request permissions.');
+        debugPrint('Location permissions are permanently denied.');
         return;
       }
 
-      // Get current position
-      final position = await _mapService.getCurrentLocation();
-      _currentPosition = position;
-      _updateCurrentLocationMarker();
-      notifyListeners();
+      // Get current position if permission is granted
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        final position = await _mapService.getCurrentLocation();
+        _currentPosition = position;
+        _updateCurrentLocationMarker();
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error getting location: $e');
     }
+  }
+
+  /// Check if location services are enabled
+  Future<bool> isLocationServiceEnabled() async {
+    return await Geolocator.isLocationServiceEnabled();
+  }
+
+  /// Check if location permission is granted
+  Future<bool> isLocationPermissionGranted() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.whileInUse || 
+           permission == LocationPermission.always;
+  }
+
+  /// Check location permission status
+  Future<LocationPermissionStatus> checkLocationPermissionStatus() async {
+    // First check if location services are enabled
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return LocationPermissionStatus.serviceDisabled;
+    }
+
+    // Then check permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    
+    if (permission == LocationPermission.denied) {
+      return LocationPermissionStatus.denied;
+    } else if (permission == LocationPermission.deniedForever) {
+      return LocationPermissionStatus.deniedForever;
+    } else if (permission == LocationPermission.whileInUse || 
+               permission == LocationPermission.always) {
+      return LocationPermissionStatus.granted;
+    }
+    
+    return LocationPermissionStatus.denied;
+  }
+
+  /// Request location permission (triggers system dialog)
+  Future<bool> requestLocationPermission() async {
+    try {
+      // First check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('Location services are disabled. Attempting to trigger system prompt.');
+        // Try to get current position which can trigger system dialog to enable location
+        try {
+          await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+            ),
+          );
+          // If successful, check again if services are enabled
+          serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          if (serviceEnabled) {
+            debugPrint('Location services were enabled');
+            // Continue to check and request permission
+          } else {
+            debugPrint('Location services still disabled');
+            return false;
+          }
+        } catch (e) {
+          debugPrint('Error getting current position: $e');
+          return false;
+        }
+      }
+      
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      // If already granted, return true
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        await refreshLocation();
+        return true;
+      }
+      
+      // Always request permission to show native dialog
+      // Even if denied or denied forever, try to request
+      debugPrint('Requesting location permission...');
+      permission = await Geolocator.requestPermission();
+      
+      debugPrint('Permission result: $permission');
+      
+      // Check result
+      bool granted = permission == LocationPermission.whileInUse || 
+                     permission == LocationPermission.always;
+      
+      // If granted, refresh location
+      if (granted) {
+        await refreshLocation();
+      }
+      
+      return granted;
+    } catch (e) {
+      debugPrint('Error requesting location permission: $e');
+      return false;
+    }
+  }
+
+  /// Refresh location continuously
+  Future<void> refreshLocation() async {
+    await _getCurrentLocation();
+  }
+
+  /// Open system location settings
+  Future<void> openLocationSettings() async {
+    await Geolocator.openLocationSettings();
   }
 
   /// Update current location marker
@@ -203,7 +321,9 @@ class NavigationController extends ChangeNotifier {
   void _advanceStepIfReached() {
     if (_currentRoute == null ||
         _currentStepIndex >= _currentRoute!.navSteps.length ||
-        _currentPosition == null) return;
+        _currentPosition == null) {
+      return;
+    }
 
     final currentStep = _currentRoute!.navSteps[_currentStepIndex];
     final distance = _mapService.calculateDistance(

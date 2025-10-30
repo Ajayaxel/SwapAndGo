@@ -22,27 +22,64 @@ class StationScreen extends StatefulWidget {
   State<StationScreen> createState() => StationScreenState();
 }
 
-class StationScreenState extends State<StationScreen> {
+class StationScreenState extends State<StationScreen> with WidgetsBindingObserver {
   late NavigationController _navigationController;
   final RealStationService _realStationService = RealStationService();
   bool _isFullscreenNavigation = false;
+  bool _isPermissionDialogShown = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _navigationController = NavigationController();
     _initializeMap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _navigationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // When app comes back to foreground, check permission status
+      _checkAndRefreshLocationPermission();
+    }
   }
 
   Future<void> _initializeMap() async {
     await _navigationController.initialize();
     // Stations will be loaded when the bloc loads them
+    _checkAndRefreshLocationPermission();
+  }
+
+  Future<void> _checkAndRefreshLocationPermission() async {
+    if (!mounted) return;
+    
+    // Check comprehensive location permission status
+    LocationPermissionStatus status = await _navigationController.checkLocationPermissionStatus();
+    
+    debugPrint('Current location permission status: $status');
+    
+    if (status == LocationPermissionStatus.granted) {
+      // Reset flag when permission is granted
+      _isPermissionDialogShown = false;
+      // Refresh location if permission is granted
+      await _navigationController.refreshLocation();
+    } else if (!_isPermissionDialogShown) {
+      // Only show once per session
+      _isPermissionDialogShown = true;
+      
+      // Always request permission to show native dialog
+      // This will show the native permission dialog for any denied state
+      debugPrint('Requesting location permission...');
+      await _navigationController.requestLocationPermission();
+    }
   }
 
   /// near by station tap on google map function

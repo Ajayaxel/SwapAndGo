@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.example.swap_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
     
     packagingOptions {
@@ -37,9 +37,9 @@ android {
     defaultConfig {
         applicationId = "com.swapandgo.customer"
         minSdk = flutter.minSdkVersion  // Android 5.0 (API level 21)
-        targetSdk = 34  // Latest Android version
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35  // Latest Android version
+        versionCode = 6
+        versionName = "1.0.2"
         
         // Add these for better Play Store compatibility
         multiDexEnabled = true

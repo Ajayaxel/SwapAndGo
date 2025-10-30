@@ -15,6 +15,7 @@ import '../../widgets/reusable_map_widget.dart';
 import '../../widgets/station_search_widget.dart';
 import '../../widgets/station_bottom_sheet.dart';
 import '../map_choice/map_choice_modal.dart';
+import 'package:geocoding/geocoding.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,31 +24,72 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomeContentModularState();
 }
 
-class _HomeContentModularState extends State<HomePage> {
+class _HomeContentModularState extends State<HomePage> with WidgetsBindingObserver {
   late NavigationController _navigationController;
   final RealStationService _realStationService = RealStationService();
   final TextEditingController _searchController = TextEditingController();
   
   bool _isFullscreenMap = false;
   List<Station> _availableStations = [];
+  bool _isPermissionDialogShown = false;
+
+  String? _locationName;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _navigationController = NavigationController();
     _initializeApp();
+    _navigationController.addListener(_fetchLocationNameIfNeeded);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _navigationController.removeListener(_fetchLocationNameIfNeeded);
     _navigationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // When app comes back to foreground, check permission status
+      _checkAndRefreshLocationPermission();
+    }
+  }
+
   Future<void> _initializeApp() async {
     await _navigationController.initialize();
     // Stations will be loaded via BlocProvider
+    _checkAndRefreshLocationPermission();
+  }
+
+  Future<void> _checkAndRefreshLocationPermission() async {
+    if (!mounted) return;
+    
+    // Check comprehensive location permission status
+    LocationPermissionStatus status = await _navigationController.checkLocationPermissionStatus();
+    
+    debugPrint('Current location permission status: $status');
+    
+    if (status == LocationPermissionStatus.granted) {
+      // Reset flag when permission is granted
+      _isPermissionDialogShown = false;
+      // Refresh location if permission is granted
+      await _navigationController.refreshLocation();
+    } else if (!_isPermissionDialogShown) {
+      // Only show once per session
+      _isPermissionDialogShown = true;
+      
+      // Always request permission to show native dialog
+      // This will show the native permission dialog for any denied state
+      debugPrint('Requesting location permission...');
+      await _navigationController.requestLocationPermission();
+    }
   }
 
   void _onStationTap(Station station) {
@@ -336,7 +378,7 @@ class _HomeContentModularState extends State<HomePage> {
               const SizedBox(width: 4),
               Text(
                 _navigationController.currentPosition != null
-                    ? '${_navigationController.currentPosition!.latitude.toStringAsFixed(4)}, ${_navigationController.currentPosition!.longitude.toStringAsFixed(4)}'
+                    ? (_locationName ?? 'Fetching address...')
                     : 'Fetching location...',
                 style: const TextStyle(fontSize: 16),
               ),
@@ -403,10 +445,11 @@ class _HomeContentModularState extends State<HomePage> {
   }
 
   Widget _buildMapSection() {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SizedBox(
-        height: 500,
+        height: screenHeight * 0.67,
         child: Stack(
           children: [
             // Map
@@ -464,5 +507,42 @@ class _HomeContentModularState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  void _fetchLocationNameIfNeeded() {
+    final pos = _navigationController.currentPosition;
+    if (pos != null) {
+      _getAddressFromLatLng(pos.latitude, pos.longitude);
+    }
+  }
+
+  Future<void> _getAddressFromLatLng(double lat, double lng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final place = placemarks[0];
+        setState(() {
+          _locationName = _formatPlacemark(place);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching address: $e');
+    }
+  }
+
+  String _formatPlacemark(Placemark place) {
+    // Prioritize meaningful information first, fallback as needed
+    if (place.name != null && place.name!.isNotEmpty) {
+      if ((place.locality ?? '').isNotEmpty) {
+        return '${place.name}, ${place.locality}';
+      } else {
+        return place.name!;
+      }
+    }
+    if ((place.locality ?? '').isNotEmpty) return place.locality!;
+    if ((place.subAdministrativeArea ?? '').isNotEmpty) return place.subAdministrativeArea!;
+    if ((place.administrativeArea ?? '').isNotEmpty) return place.administrativeArea!;
+    if ((place.country ?? '').isNotEmpty) return place.country!;
+    return 'Current location';
   }
 }
